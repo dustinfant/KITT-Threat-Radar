@@ -1,6 +1,6 @@
 # 📡 Threat-Intel-Feed
 
-A self-hosted threat intelligence dashboard. It pulls security research blogs, vendor advisories and government alerts from 28 RSS feeds, extracts the IOCs from each article, and lets you filter them and export them to CSV or STIX 2.1.
+A self-hosted threat intelligence dashboard. It pulls security research blogs, vendor advisories and government alerts from 29 RSS feeds, extracts the IOCs from each article, and lets you filter them and export them to CSV or STIX 2.1.
 
 Built for SOC analysts, threat hunters and blue teamers who want one place to watch the intel landscape without paying for a platform.
 
@@ -71,7 +71,7 @@ Edit `sources.yaml`. Each entry needs a name, an RSS/Atom URL and a category:
 
 With Docker, run `docker compose restart` to pick up the change.
 
-Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 11 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 6 news outlets (BleepingComputer, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
+Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 11 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
 
 ## 📊 Endpoints
 

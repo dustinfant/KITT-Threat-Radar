@@ -99,6 +99,10 @@
   url: https://www.bleepingcomputer.com/feed/
   category: General
 
+- name: The Hacker News
+  url: https://feeds.feedburner.com/TheHackersNews
+  category: General
+
 - name: HackRead
   url: https://hackread.com/feed/
   category: General
