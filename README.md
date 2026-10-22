@@ -1,12 +1,10 @@
-# 📡 Threat-Intel-Feed
+# 📡 KITT Threat Radar
 
-A self-hosted threat intelligence dashboard. It pulls security research blogs, vendor advisories and government alerts from 29 RSS feeds, extracts the IOCs from each article, and lets you filter them and export them to CSV or STIX 2.1.
+KITT is a self-hosted threat intelligence dashboard. It pulls security research blogs, vendor advisories and government alerts from 29 RSS feeds, extracts the IOCs from each article, and lets you filter them and export them to CSV or STIX 2.1.
 
 Built for SOC analysts, threat hunters and blue teamers who want one place to watch the intel landscape without paying for a platform.
 
-<img width="1920" height="967" alt="Dashboard view" src="https://github.com/user-attachments/assets/19272788-6a90-4eee-be43-95823ee87b1a" />
-
-<img width="1920" height="970" alt="Dashboard filtered view" src="https://github.com/user-attachments/assets/c9d1b7c0-bf45-4837-ad08-2e45b10f3fce" />
+![KITT Threat Radar dashboard](docs/dashboard.png)
 
 ## 🧠 Features
 
@@ -22,8 +20,8 @@ Built for SOC analysts, threat hunters and blue teamers who want one place to wa
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) or another Docker engine with Compose.
 
 ```bash
-git clone https://github.com/dustinfant/Threat-Intel-Feed.git
-cd Threat-Intel-Feed
+git clone https://github.com/dustinfant/KITT-Threat-Radar.git
+cd KITT-Threat-Radar
 docker compose up -d --build
 ```
 
@@ -90,7 +88,7 @@ Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntre
 ## 📦 Project structure
 
 ```
-Threat-Intel-Feed/
+KITT-Threat-Radar/
 ├── app.py                 # Flask app, IOC extraction, hourly scheduler, exports
 ├── sources.yaml           # RSS sources and categories
 ├── templates/index.html   # Dashboard UI

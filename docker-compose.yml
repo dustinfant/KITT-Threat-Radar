@@ -1,7 +1,8 @@
 services:
-  threat-intel-feed:
+  kitt:
     build: .
-    container_name: threat-intel-feed
+    image: kitt-intel
+    container_name: kitt-intel
     ports:
       - "5052:5052"
     volumes:

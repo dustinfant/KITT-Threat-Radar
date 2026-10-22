@@ -11,6 +11,10 @@ import re
 import yaml
 from bs4 import BeautifulSoup, Comment
 
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from ioc_utils import extract_iocs_from_html
+
 OUTPUT_FILE = "data/feed_normalized.json"
 
 HEADERS = {
@@ -145,9 +149,8 @@ def fetch_feed(source):
 
         iocs = {}
         if html:
-            # Extract IOCs from full page
-            text = BeautifulSoup(html, "html.parser").get_text(separator=" ", strip=True)
-            iocs = extract_iocs(text)
+            # Extract IOCs from the article body (shared logic in ioc_utils.py)
+            iocs = extract_iocs_from_html(html, link)
             # Replace summary with cleaned full page text
             summary = clean_summary(html)
             time.sleep(REQUEST_DELAY)
