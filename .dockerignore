@@ -1,0 +1,9 @@
+venv/
+.git/
+.github/
+__pycache__/
+*.pyc
+*.log
+*.swp
+.DS_Store
+data/

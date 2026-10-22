@@ -5,6 +5,10 @@ __pycache__/
 *.pyd
 venv/
 
+# Editor / OS junk
+*.swp
+.DS_Store
+
 # Logs
 *.log
 

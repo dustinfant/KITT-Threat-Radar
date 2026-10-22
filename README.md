@@ -1,132 +1,108 @@
-📡 Threat-Intel-Feed
+# 📡 Threat-Intel-Feed
 
-Threat-Intel-Feed is a Python + Flask application that aggregates, normalizes, and displays up-to-date threat intelligence content from multiple cybersecurity RSS feeds — including research blogs, vendor advisories, and government alerts. The dashboard provides filtering by source and category and also extracts IOCs (IPs, domains, hashes, CVEs) for enrichment and export.
+A self-hosted threat intelligence dashboard. It pulls security research blogs, vendor advisories and government alerts from 28 RSS feeds, extracts the IOCs from each article, and lets you filter them and export them to CSV or STIX 2.1.
 
-This tool is ideal for SOC analysts, threat hunters, blue teamers, and cybersecurity researchers who want a central intel dashboard without relying on paid platforms.
+Built for SOC analysts, threat hunters and blue teamers who want one place to watch the intel landscape without paying for a platform.
 
-🧠 Features
+<img width="1920" height="967" alt="Dashboard view" src="https://github.com/user-attachments/assets/19272788-6a90-4eee-be43-95823ee87b1a" />
 
-✅ Aggregates multiple cybersecurity dashboards in one view
+<img width="1920" height="970" alt="Dashboard filtered view" src="https://github.com/user-attachments/assets/c9d1b7c0-bf45-4837-ad08-2e45b10f3fce" />
 
-✅ Normalizes RSS feeds into structured JSON data
+## 🧠 Features
 
-✅ Extracts Indicators of Compromise (IPs, domains, hashes, CVEs, emails)
+- **One feed, many sources.** Aggregates vendor, research, news and government RSS feeds configured in `sources.yaml`.
+- **IOC extraction.** Pulls IPs, domains, emails, MD5/SHA1/SHA256 hashes and CVEs out of every article.
+- **Filtering.** Narrow by category, source, or only articles that contain IOCs.
+- **Export.** Download IOCs as CSV or as a STIX 2.1 bundle for SIEM/EDR ingestion.
+- **Hands-off updates.** The server refetches every hour, and the dashboard reloads itself when new articles land, keeping your filters and scroll position.
+- **Runs in Docker.** One command to start, restarts on its own after a reboot.
 
-✅ Auto-refreshes feeds hourly while the server runs
+## 🚀 Quick start (Docker, recommended)
 
-✅ Filterable UI by source, category, and IOC presence
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) or another Docker engine with Compose.
 
-✅ CSV & STIX export of IOCs
-
-✅ Lightweight Flask-based dashboard
-
-
-🚀 Screenshots
-
-<img width="1920" height="967" alt="Screenshot from 2026-02-24 14-29-55" src="https://github.com/user-attachments/assets/19272788-6a90-4eee-be43-95823ee87b1a" />
-
-
-<img width="1920" height="970" alt="Screenshot from 2026-02-24 14-30-09" src="https://github.com/user-attachments/assets/c9d1b7c0-bf45-4837-ad08-2e45b10f3fce" />
-
-
-
-
-📦 Project Structure
-
-<img width="446" height="632" alt="Screenshot from 2026-02-24 14-34-49" src="https://github.com/user-attachments/assets/3d264739-5b1c-4601-b155-f4e40e72296c" />
-
-
-🛠️ Installation
-
-Clone the repository:
-
+```bash
 git clone https://github.com/dustinfant/Threat-Intel-Feed.git
-
 cd Threat-Intel-Feed
+docker compose up -d --build
+```
 
+Open **http://localhost:5052**. On a fresh install the page shows "Fetching feeds..." for a few minutes while the first pull runs, then reloads on its own.
 
-Install dependencies:
+The container is set to `restart: unless-stopped`, so it comes back whenever Docker starts. Turn on *Start Docker Desktop when you sign in* in Docker Desktop's settings and the dashboard is up every time you log in.
 
+| Task | Command |
+|---|---|
+| Watch the logs | `docker compose logs -f` |
+| Restart (after editing `sources.yaml`) | `docker compose restart` |
+| Rebuild (after changing code or templates) | `docker compose up -d --build` |
+| Stop | `docker compose down` |
+
+`data/` and `sources.yaml` are mounted from the host, so the collected feed survives rebuilds and source changes don't need one.
+
+## 🐍 Running without Docker
+
+Requires Python 3.10+.
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-
-
-📡 Run the Feed Fetcher
-
-Before starting the dashboard, populate the normalized feed:
-
-python fetcher/fetch_normalized.py
-
-This will pull all configured sources from sources.yaml, extract content, and save to data/feed_normalized.json.
-
-
-🌐 Start the Dashboard
-
 python app.py
+```
 
-Then open your browser and navigate to:
+Then open http://localhost:5052. `app.py` fetches on startup and every hour after. `restart_flask.sh` restarts it in the background and logs to `flask.log`.
 
-http://localhost:5052
+To populate the feed without starting the server:
 
-The dashboard will show articles grouped by category.
+```bash
+python fetcher/fetch_normalized.py
+```
 
+## 🗂 Adding sources
 
-🔄 Auto-Refresh & Indicators
+Edit `sources.yaml`. Each entry needs a name, an RSS/Atom URL and a category:
 
-While app.py is running:
-
-Feeds are automatically refreshed every hour via APScheduler.
-
-IOCs are extracted from article content and available for export.
-
-
-📊 Exporting IOCs
-
-CSV Export:
-
-/export/csv
-
-STIX 2.1 Export:
-
-/export/stix
-
-🗂 sources.yaml
-
-Add new sources by editing sources.yaml. Each entry contains:
-
+```yaml
 - name: Some Source
-
   url: https://example.com/feed.xml
+  category: Vendor   # Vendor | Research | General | Government
+```
 
-  category: Vendor|Research|Government|General
+With Docker, run `docker compose restart` to pick up the change.
 
+Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 11 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 6 news outlets (BleepingComputer, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
 
-🧪 Example Feeds Included
+## 📊 Endpoints
 
-Some of the sources currently configured:
+| Path | Returns |
+|---|---|
+| `/` | The dashboard |
+| `/api/feed` | The full normalized feed as JSON |
+| `/api/feed/count` | `{"count": n}`, which the dashboard polls for new articles |
+| `/export/csv` | Articles with IOCs, one row per article |
+| `/export/stix` | A STIX 2.1 bundle of indicators |
 
-Squiblydoo (Research)
+## ⚙️ GitHub Action
 
-ZDNet Security (General)
+`.github/workflows/fetch_feed.yml` runs the fetcher hourly on GitHub and commits the refreshed `data/feed_normalized.json`, so the repo always carries a recent snapshot of the feed. It can also be run by hand from the Actions tab.
 
-BleepingComputer (General)
+## 📦 Project structure
 
-Huntress (Vendor)
+```
+Threat-Intel-Feed/
+├── app.py                 # Flask app, IOC extraction, hourly scheduler, exports
+├── sources.yaml           # RSS sources and categories
+├── templates/index.html   # Dashboard UI
+├── fetcher/               # Standalone fetch scripts (used by the GitHub Action)
+├── data/                  # feed_normalized.json lives here
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+└── restart_flask.sh       # Non-Docker restart helper
+```
 
-Check Point Research (Vendor)
+## 📝 Notes
 
-CISA Alerts (Government)
-
-… and more.
-
-
-🧠 Why This Matters
-
-This project gives you:
-
-A centralized view of disparate cybersecurity feeds
-
-Real-time trending threat intel
-
-Ability to export IOCs for SIEM/EDR ingestion
-
-A portfolio-ready tool that demonstrates automation + threat intel knowledge
+- IOC extraction is regex-based, so expect some noise (version numbers that look like IPs, the publisher's own domains). The CSV and STIX exports drop the article's own domain.
+- Flask's built-in server is fine for local use. Put it behind a production WSGI server before exposing it beyond your machine.

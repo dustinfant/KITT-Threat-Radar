@@ -204,19 +204,51 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // -------------------------
-  // Auto-refresh if feed is empty
+  // Auto-refresh when new articles arrive
   // -------------------------
-  {% if fetching %}
-  setInterval(function() {
-    fetch("/api/feed")
+  const STATE_KEY = "tif-view-state";
+  const loadedCount = {{ total }};
+  // Poll every 30s while the first fetch is running, then every 5 minutes
+  const pollMs = {{ 30000 if fetching else 300000 }};
+
+  // Restore filters and scroll position saved before an auto-reload
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null");
+    if (saved) {
+      sessionStorage.removeItem(STATE_KEY);
+      if ([...categoryFilter.options].some(o => o.value === saved.category)) {
+        categoryFilter.value = saved.category;
+      }
+      if ([...sourceFilter.options].some(o => o.value === saved.source)) {
+        sourceFilter.value = saved.source;
+      }
+      onlyIocs = !!saved.onlyIocs;
+      iocToggle.textContent = onlyIocs
+        ? "Show All Entries"
+        : "Only Show Entries With IOCs";
+      applyFilters();
+      window.scrollTo(0, saved.scrollY || 0);
+    }
+  } catch (e) {}
+
+  setInterval(function () {
+    fetch("/api/feed/count")
       .then(response => response.json())
       .then(data => {
-        if (data.length > 0) {
+        if (data.count > loadedCount) {
+          try {
+            sessionStorage.setItem(STATE_KEY, JSON.stringify({
+              category: categoryFilter.value,
+              source: sourceFilter.value,
+              onlyIocs: onlyIocs,
+              scrollY: window.scrollY
+            }));
+          } catch (e) {}
           window.location.reload();
         }
-      });
-  }, 30000); // every 30 seconds
-  {% endif %}
+      })
+      .catch(() => {}); // server restarting; try again next tick
+  }, pollMs);
 });
 </script>
 

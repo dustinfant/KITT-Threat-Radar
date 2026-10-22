@@ -1,0 +1,12 @@
+services:
+  threat-intel-feed:
+    build: .
+    container_name: threat-intel-feed
+    ports:
+      - "5052:5052"
+    volumes:
+      # Feed JSON survives rebuilds and restarts
+      - ./data:/app/data
+      # Edit sources.yaml on your Mac; restart the container to pick it up
+      - ./sources.yaml:/app/sources.yaml:ro
+    restart: unless-stopped
