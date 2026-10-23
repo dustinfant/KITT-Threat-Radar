@@ -10,4 +10,7 @@ services:
       - ./data:/app/data
       # Edit sources.yaml on your Mac; restart the container to pick it up
       - ./sources.yaml:/app/sources.yaml:ro
+    environment:
+      # Hide and drop articles older than this many days
+      - MAX_AGE_DAYS=30
     restart: unless-stopped

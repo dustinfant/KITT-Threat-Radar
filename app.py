@@ -26,23 +26,64 @@ HEADERS = {
                   "(KHTML, like Gecko) Chrome/121.0 Safari/537.36"
 }
 
+# Articles older than this are hidden, dropped from storage, and never fetched.
+# Override with the MAX_AGE_DAYS environment variable (see docker-compose.yml).
+MAX_AGE_DAYS = int(os.environ.get("MAX_AGE_DAYS", "30"))
+
 # -------------------------
 # HELPERS
 # -------------------------
-_feed_cache = {"mtime": None, "feed": []}
+def parse_published(value):
+    """Feed date string -> aware datetime, or None if missing, unparseable or bogus (year 0001/1970)."""
+    dt = _parse_date_raw(value)
+    return dt if dt and dt.year >= 1990 else None
+
+def _parse_date_raw(value):
+    if not value:
+        return None
+    parsed = feedparser.datetimes._parse_date(value)
+    if parsed:
+        dt = datetime.datetime(*parsed[:6], tzinfo=datetime.timezone.utc)
+    else:
+        dt = None
+        for fmt in ("%b %d, %Y %H:%M:%S%z", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d"):  # e.g. CrowdStrike's format
+            try:
+                dt = datetime.datetime.strptime(value.strip(), fmt)
+                break
+            except ValueError:
+                continue
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
+
+def cutoff():
+    return datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=MAX_AGE_DAYS)
+
+def is_too_old(published):
+    dt = _parse_date_raw(published)          # bogus 0001/1970 dates count as old
+    return dt is not None and dt < cutoff()   # undated articles are kept
+
+def newest_first(entries):
+    epoch = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+    return sorted(entries, key=lambda e: parse_published(e.get("published")) or epoch, reverse=True)
+
+_feed_cache = {"key": None, "feed": []}
 
 def load_feed():
-    """Load the feed and clean every entry's IOCs (also fixes entries stored before the cleanup existed).
-    Cached until the data file changes."""
+    """Recent articles, newest first, with cleaned IOCs (also fixes entries stored before the cleanup).
+    Cached until the data file changes or the day rolls over."""
     if not os.path.exists(DATA_FILE):
         return []
-    mtime = os.path.getmtime(DATA_FILE)
-    if _feed_cache["mtime"] != mtime:
+    key = (os.path.getmtime(DATA_FILE), datetime.date.today())
+    if _feed_cache["key"] != key:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             feed = json.load(f)
+        feed = [e for e in feed if not is_too_old(e.get("published"))]
         for entry in feed:
             entry["iocs"] = clean_iocs(entry.get("iocs"), entry.get("link", ""))
-        _feed_cache.update(mtime=mtime, feed=feed)
+        _feed_cache.update(key=key, feed=newest_first(feed))
     return _feed_cache["feed"]
 
 def group_by_category(feed):
@@ -88,6 +129,8 @@ def fetch_rss(feed_info, known_links=frozenset()):
     for entry in feed.entries:
         if entry.get("link", "") in known_links:
             continue  # already stored; don't re-download the article every hour
+        if is_too_old(entry.get("published", "")):
+            continue  # some feeds return years of archives
         normalized.append({
             "title": entry.get("title", ""),
             "link": entry.get("link", ""),
@@ -113,14 +156,15 @@ def update_feed():
         except Exception as exc:
             print(f"[!] Failed source {feed_info.get('name')}: {exc}")
 
-    # Deduplicate, and store cleaned IOCs
+    # Deduplicate, drop old articles, store cleaned IOCs, newest first
     seen_links = set()
     deduped = []
     for e in combined:
-        if e["link"] not in seen_links:
+        if e["link"] not in seen_links and not is_too_old(e.get("published")):
             e["iocs"] = clean_iocs(e.get("iocs"), e.get("link", ""))
             deduped.append(e)
             seen_links.add(e["link"])
+    deduped = newest_first(deduped)
 
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -134,7 +178,8 @@ def index():
     feed = load_feed()
     grouped, sources = group_by_category(feed)
     fetching = len(feed) == 0  # Banner if feed empty
-    return render_template("index.html", grouped=grouped, sources=sources, fetching=fetching, total=len(feed))
+    return render_template("index.html", grouped=grouped, sources=sources, feed_list=feed,
+                           fetching=fetching, total=len(feed))
 
 @app.route("/api/feed")
 def api_feed():

@@ -12,6 +12,7 @@ Built for SOC analysts, threat hunters and blue teamers who want one place to wa
 - **IOC extraction.** Pulls IPs, domains, emails, MD5/SHA1/SHA256 hashes and CVEs out of every article.
 - **Filtering.** Narrow by category, source, or only articles that contain IOCs.
 - **Export.** Download IOCs as CSV or as a STIX 2.1 bundle for SIEM/EDR ingestion.
+- **Fresh by default.** Newest articles first; anything older than 30 days is hidden and pruned (set `MAX_AGE_DAYS` in `docker-compose.yml` to change it).
 - **Hands-off updates.** The server refetches every hour, and the dashboard reloads itself when new articles land, keeping your filters and scroll position.
 - **Runs in Docker.** One command to start, restarts on its own after a reboot.
 
@@ -102,5 +103,5 @@ KITT-Threat-Radar/
 
 ## 📝 Notes
 
-- IOC extraction is regex-based, so expect some noise (version numbers that look like IPs, the publisher's own domains). The CSV and STIX exports drop the article's own domain.
+- IOC extraction is regex-based. It reads only the article body, drops the publisher's own domains, filenames that look like domains (`httpd.conf`, `update.zip`) and invalid IPs, but expect some noise, such as reference sites the article cites.
 - Flask's built-in server is fine for local use. Put it behind a production WSGI server before exposing it beyond your machine.

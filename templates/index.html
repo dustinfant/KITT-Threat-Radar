@@ -131,10 +131,10 @@ header {
 </div>
 
 <div class="feed-grid" id="feedGrid">
-{% for category, feeds in grouped.items() %}
-  {% for feed in feeds %}
+{# One list, newest first; category is kept on each card for the filter #}
+{% for feed in feed_list %}
   <div class="feed-card"
-       data-category="{{ category }}"
+       data-category="{{ feed.category or 'Unknown' }}"
        data-source="{{ feed.source }}"
        data-has-iocs="{{ 'true' if feed.iocs else 'false' }}">
 
@@ -161,7 +161,6 @@ header {
       Source: {{ feed.source }} | Published: {{ feed.published }}
     </div>
   </div>
-  {% endfor %}
 {% endfor %}
 </div>
 
