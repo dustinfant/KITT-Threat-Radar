@@ -22,3 +22,6 @@ data/cache/
 feed_iocs_only.csv
 
 data/feed_normalized.json
+
+# Live feed data (written by the running app)
+data/*.tmp

@@ -150,25 +150,33 @@ def update_feed():
     combined = existing.copy()
     known_links = {e.get("link") for e in existing}
     sources = load_sources()
+    print(f"[*] Fetching {len(sources)} sources", flush=True)
     for feed_info in sources:
         try:
-            combined += fetch_rss(feed_info, known_links)
+            new = fetch_rss(feed_info, known_links)
+            combined += new
+            print(f"[+] {feed_info.get('name')}: {len(new)} new", flush=True)
         except Exception as exc:
-            print(f"[!] Failed source {feed_info.get('name')}: {exc}")
+            print(f"[!] Failed source {feed_info.get('name')}: {exc}", flush=True)
+        save_feed(combined)   # save after each source so the dashboard fills in as it goes
+    print("[*] Fetch complete", flush=True)
 
-    # Deduplicate, drop old articles, store cleaned IOCs, newest first
+def save_feed(entries):
+    """Deduplicate, drop old articles, clean IOCs, sort newest first, and write atomically."""
     seen_links = set()
     deduped = []
-    for e in combined:
-        if e["link"] not in seen_links and not is_too_old(e.get("published")):
+    for e in entries:
+        if e.get("link") not in seen_links and not is_too_old(e.get("published")):
             e["iocs"] = clean_iocs(e.get("iocs"), e.get("link", ""))
             deduped.append(e)
-            seen_links.add(e["link"])
+            seen_links.add(e.get("link"))
     deduped = newest_first(deduped)
 
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
+    tmp = DATA_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(deduped, f, indent=2)
+    os.replace(tmp, DATA_FILE)   # readers never see a half-written file
 
 # -------------------------
 # ROUTES

@@ -82,10 +82,6 @@ Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntre
 | `/export/csv` | Articles with IOCs, one row per article |
 | `/export/stix` | A STIX 2.1 bundle of indicators |
 
-## ⚙️ GitHub Action
-
-`.github/workflows/fetch_feed.yml` runs the fetcher hourly on GitHub and commits the refreshed `data/feed_normalized.json`, so the repo always carries a recent snapshot of the feed. It can also be run by hand from the Actions tab.
-
 ## 📦 Project structure
 
 ```
@@ -93,8 +89,8 @@ KITT-Threat-Radar/
 ├── app.py                 # Flask app, IOC extraction, hourly scheduler, exports
 ├── sources.yaml           # RSS sources and categories
 ├── templates/index.html   # Dashboard UI
-├── fetcher/               # Standalone fetch scripts (used by the GitHub Action)
-├── data/                  # feed_normalized.json lives here
+├── fetcher/               # Standalone fetch scripts
+├── data/                  # feed_normalized.json (local only, not in git)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
