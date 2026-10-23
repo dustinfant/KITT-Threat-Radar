@@ -78,7 +78,7 @@ Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntre
 |---|---|
 | `/` | The dashboard |
 | `/api/feed` | The full normalized feed as JSON |
-| `/api/feed/count` | `{"count": n}`, which the dashboard polls for new articles |
+| `/api/feed/count` | `{"count": n, "latest": "<newest article link>"}`, which the dashboard polls for new articles |
 | `/export/csv` | Articles with IOCs, one row per article |
 | `/export/stix` | A STIX 2.1 bundle of indicators |
 

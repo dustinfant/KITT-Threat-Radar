@@ -179,7 +179,8 @@ def index():
     grouped, sources = group_by_category(feed)
     fetching = len(feed) == 0  # Banner if feed empty
     return render_template("index.html", grouped=grouped, sources=sources, feed_list=feed,
-                           fetching=fetching, total=len(feed))
+                           fetching=fetching, total=len(feed),
+                           latest=feed[0].get("link", "") if feed else "")
 
 @app.route("/api/feed")
 def api_feed():
@@ -187,8 +188,10 @@ def api_feed():
 
 @app.route("/api/feed/count")
 def api_feed_count():
-    # Lightweight check the dashboard polls to see if new articles arrived
-    return jsonify({"count": len(load_feed())})
+    # Lightweight check the dashboard polls to see if new articles arrived.
+    # "latest" (newest article's link) changes even when old articles age out at the same time.
+    feed = load_feed()
+    return jsonify({"count": len(feed), "latest": feed[0].get("link", "") if feed else ""})
 
 # -------------------------
 # CSV EXPORT

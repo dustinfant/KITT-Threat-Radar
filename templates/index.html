@@ -206,7 +206,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Auto-refresh when new articles arrive
   // -------------------------
   const STATE_KEY = "tif-view-state";
-  const loadedCount = {{ total }};
+  const loadedLatest = {{ latest|tojson }};
   // Poll every 30s while the first fetch is running, then every 5 minutes
   const pollMs = {{ 30000 if fetching else 300000 }};
 
@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {
     fetch("/api/feed/count")
       .then(response => response.json())
       .then(data => {
-        if (data.count > loadedCount) {
+        if (data.latest && data.latest !== loadedLatest) {
           try {
             sessionStorage.setItem(STATE_KEY, JSON.stringify({
               category: categoryFilter.value,
