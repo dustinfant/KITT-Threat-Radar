@@ -1,8 +1,11 @@
+# Project name shown in Docker Desktop (Docker requires lowercase, no spaces)
+name: kitt-threat-radar
+
 services:
   kitt:
     build: .
-    image: kitt-intel
-    container_name: kitt-intel
+    image: kitt-threat-radar
+    container_name: kitt-threat-radar
     ports:
       - "5052:5052"
     volumes:
