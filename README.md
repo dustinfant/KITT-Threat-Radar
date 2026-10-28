@@ -1,5 +1,7 @@
 # 📡 KITT Threat Radar
 
+**Knowledge & Intelligence Threat Tracker**
+
 KITT is a self-hosted threat intelligence dashboard. It pulls security research blogs, vendor advisories and government alerts from 29 RSS feeds, extracts the IOCs from each article, and lets you filter them and export them to CSV or STIX 2.1.
 
 Built for SOC analysts, threat hunters and blue teamers who want one place to watch the intel landscape without paying for a platform.
@@ -72,6 +74,15 @@ With Docker, run `docker compose restart` to pick up the change.
 
 Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 11 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
 
+## 🚫 Ignoring noisy indicators
+
+`ioc_ignore.yaml` hides indicators everywhere, exports included:
+
+- **domains:** reference sites, social media and security vendors (each entry covers its subdomains).
+- **values:** exact IPs, hashes, emails, CVEs or paths. The **Ignore** buttons in Discover and Investigate add to this list, and Stay Ahead lists it with one-click undo.
+
+Private, loopback and reserved IPs are always ignored. Edits apply within a minute without a restart, and un-ignoring brings an indicator back, since stored data is never stripped.
+
 ## 📊 Endpoints
 
 | Path | Returns |
@@ -87,7 +98,9 @@ Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntre
 ```
 KITT-Threat-Radar/
 ├── app.py                 # Flask app, IOC extraction, hourly scheduler, exports
+├── ioc_utils.py           # IOC extraction, cleanup and ignore list
 ├── sources.yaml           # RSS sources and categories
+├── ioc_ignore.yaml        # Indicators to hide
 ├── templates/index.html   # Dashboard UI
 ├── fetcher/               # Standalone fetch scripts
 ├── data/                  # feed_normalized.json (local only, not in git)

@@ -2,254 +2,856 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KITT Threat Radar</title>
-
 <style>
-body {
-  background:#121212;
-  color:#e0e0e0;
-  font-family: Arial, sans-serif;
-  margin:0;
-  padding:0;
+:root {
+  --bg: #040705;
+  --panel: #08100b;
+  --panel-2: #0c1610;
+  --line: #163021;
+  --line-bright: #23603a;
+  --green: #39ff88;
+  --green-mid: #22c466;
+  --green-dim: #187a42;
+  --text: #cde7d5;
+  --muted: #6c8c77;
+  --purple: #bb86fc;
+  --purple-dim: #6d4a9e;
+  --amber: #ffc23d;
+  --red: #ff5f5f;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --glow: 0 0 0 1px var(--line), 0 0 18px rgba(57, 255, 136, 0.06);
+}
+* { box-sizing: border-box; }
+html { font-size: clamp(15px, 0.45vw + 9.5px, 20px); }   /* text scales with the window */
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+body { min-height: 100vh; }
+a { color: var(--green); }
+button, input, select { font: inherit; color: inherit; }
+::selection { background: var(--green-dim); color: #fff; }
+
+/* Faint scanlines over the whole console */
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background: repeating-linear-gradient(to bottom, rgba(57,255,136,0.025) 0 1px, transparent 1px 3px);
 }
 
-header {
-  text-align:center;
-  padding:1rem;
-  font-size:1.6rem;
-  color:#7CFC98;
-}
+.wrap { width: 100%; margin: 0 auto; padding: 0 clamp(16px, 2.2vw, 48px) 40px; }
 
-.fetching-banner {
-  text-align:center;
-  padding:0.75rem;
-  background:#bb86fc;
-  color:#121212;
-  font-weight:bold;
+/* ---------- Header ---------- */
+.top {
+  position: relative;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px;
+  padding: 18px 0 14px;
 }
-
-.controls {
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:0.75rem;
-  padding:0.75rem;
-  background:#1a1a1a;
+.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, var(--green-dim), var(--purple-dim) 60%, transparent); }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand svg { flex: none; }
+.brand h1 {
+  margin: 0; font-family: var(--mono); font-size: 1.35rem; letter-spacing: 0.22em; color: var(--green);
+  text-shadow: 0 0 12px rgba(57,255,136,0.45);
 }
-
-.controls select,
-.controls button {
-  padding:0.5rem 0.75rem;
-  font-size:0.9rem;
-  background:#2a2a2a;
-  color:#e0e0e0;
-  border-radius:6px;
-  border:1px solid #444;
-  cursor:pointer;
+.brand .sub { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.2em; color: var(--purple); text-shadow: 0 0 10px rgba(187,134,252,0.35); margin-top: 3px; }
+.sys { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line-bright);
+  border-radius: 999px; color: var(--green); background: rgba(57,255,136,0.05);
 }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; animation: pulse 2s ease-in-out infinite; }
+.pill.warn { color: var(--amber); border-color: rgba(255,194,61,0.4); background: rgba(255,194,61,0.06); }
+.pill.busy { color: var(--purple); border-color: rgba(187,134,252,0.45); background: rgba(187,134,252,0.07); }
+.pill.bad { color: var(--red); border-color: rgba(255,95,95,0.4); background: rgba(255,95,95,0.06); }
+.sys .meta { color: var(--muted); }
+.sys .meta b { color: var(--text); font-weight: 600; }
+@keyframes pulse { 50% { opacity: 0.35; } }
 
-.controls button:hover {
-  background:#333;
+/* ---------- Console: radar + stats ---------- */
+.console { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+.panel { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--glow); padding: 16px; min-width: 0; }
+.panel-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; }
+.panel-title b { color: var(--purple); font-weight: 600; }
+
+.radar-panel { display: grid; grid-template-columns: minmax(0, 1fr) clamp(220px, 24%, 380px); gap: 16px; }
+.radar-box { position: relative; aspect-ratio: 1 / 1; width: 100%; max-width: min(100%, 76vh); margin: 0 auto; }
+#radar { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.radar-tip {
+  border-color: var(--purple-dim) !important;
+  position: absolute; pointer-events: none; max-width: 18rem; padding: 8px 10px; font-size: 0.78rem; line-height: 1.35;
+  background: rgba(4,7,5,0.94); border: 1px solid var(--line-bright); border-radius: 6px; display: none; z-index: 5;
 }
+.radar-tip .t-src { font-family: var(--mono); font-size: 0.68rem; color: var(--purple); letter-spacing: 0.05em; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: 0.68rem; color: var(--muted); margin-top: 10px; justify-content: center; }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 
-.feed-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
-  gap:1rem;
-  padding:1rem;
+.contact { border-left: 1px solid var(--line); padding-left: 16px; min-width: 0; display: flex; flex-direction: column; }
+.contact .empty { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+.contact h3 { margin: 4px 0 8px; font-size: 0.98rem; line-height: 1.35; }
+.contact h3 a { color: var(--text); text-decoration: none; }
+.contact h3 a:hover { color: var(--green); }
+.contact .when { font-family: var(--mono); font-size: 0.7rem; color: var(--purple); }
+.contact .actions { margin-top: auto; padding-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: rgba(57,255,136,0.02); }
+.stat .label { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.16em; color: var(--purple); text-transform: uppercase; }
+.stat .value { font-family: var(--mono); font-size: 1.7rem; color: var(--green); margin-top: 6px; text-shadow: 0 0 10px rgba(57,255,136,0.35); }
+.stat .value small { font-size: 0.85rem; color: var(--muted); text-shadow: none; }
+.stat .hint { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+.bars { margin-top: 16px; display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: 5.5rem minmax(0,1fr) 3.5rem; align-items: center; gap: 10px; font-family: var(--mono); font-size: 0.74rem; cursor: pointer; padding: 2px 0; background: none; border: 0; text-align: left; width: 100%; }
+.bar:hover .bar-label { color: var(--purple); }
+.bar-label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.bar-track { height: 8px; background: rgba(57,255,136,0.06); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--green)); box-shadow: 0 0 10px rgba(57,255,136,0.5); border-radius: 4px; }
+.bar-num { text-align: right; color: var(--text); }
+
+.fetchline { margin-top: 14px; font-family: var(--mono); font-size: 0.72rem; color: var(--muted); min-height: 1.2em; }
+.fetchline b { color: var(--purple); font-weight: 600; }
+
+/* ---------- Tabs ---------- */
+.tabs { display: flex; gap: 6px; margin: 22px 0 14px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab {
+  background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 16px; cursor: pointer;
+  font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.18em; color: var(--muted); white-space: nowrap;
 }
+.tab:hover { color: var(--purple); }
+.tab[aria-selected="true"] { color: var(--green); border-bottom-color: var(--green); text-shadow: 0 0 10px rgba(57,255,136,0.4); }
+.view[hidden] { display: none; }
 
-.feed-card {
-  background:#1e1e1e;
-  border-radius:10px;
-  padding:1rem;
+/* ---------- Controls ---------- */
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.input, .select {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 0.85rem; min-width: 0;
 }
-
-.feed-card h2 a {
-  color:#7CFC98;
-  text-decoration:none;
+.input:focus, .select:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 2px rgba(187,134,252,0.2); }
+.input.grow { flex: 1 1 260px; }
+.btn {
+  background: rgba(57,255,136,0.06); border: 1px solid var(--line-bright); color: var(--green); border-radius: 6px;
+  padding: 8px 12px; font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
 }
+.btn:hover { background: rgba(57,255,136,0.13); border-color: var(--green-mid); }
+.btn.on { background: var(--green); color: #031008; border-color: var(--green); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.sm { padding: 4px 8px; font-size: 0.68rem; }
+.count { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-left: auto; }
 
-.feed-card h2 a:hover {
-  text-decoration:underline;
+/* ---------- Monitor cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card:hover { border-color: var(--purple-dim); box-shadow: 0 0 16px rgba(187,134,252,0.08); }
+.card.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0% { border-color: var(--green); box-shadow: 0 0 20px rgba(57,255,136,0.4); } }
+.card .meta { font-family: var(--mono); font-size: 0.68rem; color: var(--purple); letter-spacing: 0.04em; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.card .meta .cat { color: var(--green-mid); }
+.card .meta span + span::before { content: "· "; color: var(--purple-dim); }
+.card h2 { margin: 0; font-size: 0.98rem; line-height: 1.35; }
+.card h2 a { color: var(--text); text-decoration: none; }
+.card h2 a:hover { color: var(--green); }
+.card p { margin: 0; font-size: 0.82rem; line-height: 1.45; color: #9fb8a7; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--line-bright); color: var(--green); background: rgba(57,255,136,0.05); text-transform: uppercase; }
+.chip.cve { color: var(--amber); border-color: rgba(255,194,61,0.4); background: rgba(255,194,61,0.06); }
+details.iocs summary { cursor: pointer; font-family: var(--mono); font-size: 0.7rem; color: var(--purple); letter-spacing: 0.08em; list-style: none; }
+details.iocs summary::-webkit-details-marker { display: none; }
+details.iocs summary::before { content: "▸ "; }
+details.iocs[open] summary::before { content: "▾ "; }
+.ioc-group { margin-top: 8px; }
+.ioc-group .type { font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.14em; color: var(--purple); text-transform: uppercase; margin-bottom: 3px; }
+.ioc-link { display: block; font-family: var(--mono); font-size: 0.74rem; color: var(--green); background: none; border: 0; padding: 1px 0; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.ioc-link:hover { text-decoration: underline; }
+.empty-state { color: var(--muted); padding: 30px; text-align: center; border: 1px dashed var(--line); border-radius: 8px; font-size: 0.9rem; }
+
+/* ---------- Tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+th { text-align: left; font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.14em; color: var(--purple); text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel-2); position: sticky; top: 0; font-weight: 500; }
+td { padding: 8px 12px; border-bottom: 1px solid rgba(22,48,33,0.6); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: rgba(187,134,252,0.05); }
+td.mono { font-family: var(--mono); font-size: 0.78rem; overflow-wrap: anywhere; }
+td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
+td.nowrap { white-space: nowrap; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: var(--muted); }
+.status-dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.status-dot.bad { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.err { color: var(--red); font-size: 0.74rem; }
+.more { margin-top: 12px; text-align: center; }
+
+/* ---------- Investigate ---------- */
+.inv-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
+.inv-head .value { font-family: var(--mono); font-size: 1.15rem; color: var(--green); overflow-wrap: anywhere; text-shadow: 0 0 10px rgba(57,255,136,0.35); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
+.list { display: grid; gap: 8px; }
+.list-item { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: var(--panel); }
+.list-item a { color: var(--text); text-decoration: none; font-size: 0.88rem; }
+.list-item a:hover { color: var(--green); }
+.list-item .meta { font-family: var(--mono); font-size: 0.68rem; color: var(--purple); margin-top: 4px; }
+.related { display: flex; flex-wrap: wrap; gap: 6px; }
+.related .btn { text-transform: none; letter-spacing: 0; color: var(--purple); border-color: var(--purple-dim); background: rgba(187,134,252,0.06); }
+.related .btn:hover { background: rgba(187,134,252,0.14); border-color: var(--purple); }
+
+/* ---------- Stay Ahead ---------- */
+.ahead { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.ahead p { color: var(--muted); font-size: 0.84rem; line-height: 1.5; margin: 0 0 12px; }
+.section-title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.2em; color: var(--purple); text-transform: uppercase; margin: 22px 0 10px; }
+
+.btn.ghost { color: var(--muted); border-color: var(--line); background: none; }
+.btn.ghost:hover { color: var(--red); border-color: rgba(255,95,95,0.5); background: rgba(255,95,95,0.06); }
+.ignore-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.ignore-item { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.74rem; padding: 3px 4px 3px 9px; border: 1px solid var(--purple-dim); border-radius: 5px; color: var(--purple); background: rgba(187,134,252,0.05); }
+.ignore-item button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 0 4px; }
+.ignore-item button:hover { color: var(--red); }
+.ignore-item.domain { border-color: var(--line); color: var(--muted); padding-right: 9px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--green); color: #031008; font-family: var(--mono); font-size: 0.78rem; padding: 8px 14px; border-radius: 6px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 60; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 1100px) {
+  .console { grid-template-columns: 1fr; }
 }
-
-.feed-meta {
-  font-size:0.8rem;
-  color:#bb86fc;
-  margin-top:0.5rem;
+@media (max-width: 760px) {
+  .wrap { padding: 0 16px 32px; }
+  .radar-panel { grid-template-columns: 1fr; }
+  .contact { border-left: 0; border-top: 1px solid var(--line); padding: 14px 0 0; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: 1fr; }
+  .brand h1 { font-size: 1.1rem; letter-spacing: 0.16em; }
 }
-
-.iocs {
-  margin-top:0.8rem;
-  font-family:monospace;
-  font-size:0.8rem;
-  color:#7CFC98;
-}
-
-.ioc-type {
-  color:#bb86fc;
-  font-weight:bold;
+@media (prefers-reduced-motion: reduce) {
+  .pill .dot, .card.flash { animation: none; }
 }
 </style>
 </head>
-
 <body>
+<div class="wrap">
 
-<header>KITT Threat Radar</header>
-
-{% if fetching %}
-<div class="fetching-banner">
-  Fetching feeds... Please wait.
-</div>
-{% endif %}
-
-<div class="controls">
-  <select id="categoryFilter">
-    <option value="all">All Categories</option>
-    {% for category in grouped.keys() %}
-    <option value="{{ category }}">{{ category }}</option>
-    {% endfor %}
-  </select>
-
-  <select id="sourceFilter">
-    <option value="all">All Sources</option>
-    {% for source in sources %}
-    <option value="{{ source }}">{{ source }}</option>
-    {% endfor %}
-  </select>
-
-  <button id="iocToggle">Only Show Entries With IOCs</button>
-
-  <button onclick="window.location='/export/csv'">
-    Export IOCs to CSV
-  </button>
-
-  <button onclick="window.location='/export/stix'">
-    Export IOCs to STIX
-  </button>
-</div>
-
-<div class="feed-grid" id="feedGrid">
-{# One list, newest first; category is kept on each card for the filter #}
-{% for feed in feed_list %}
-  <div class="feed-card"
-       data-category="{{ feed.category or 'Unknown' }}"
-       data-source="{{ feed.source }}"
-       data-has-iocs="{{ 'true' if feed.iocs else 'false' }}">
-
-    <h2>
-      <a href="{{ feed.link }}" target="_blank">
-        {{ feed.title }}
-      </a>
-    </h2>
-
-    <p>{{ feed.summary }}</p>
-
-    {% if feed.iocs %}
-    <div class="iocs">
-      {% for k, v in feed.iocs.items() %}
-        <div class="ioc-type">{{ k.upper() }}</div>
-        {% for item in v %}
-          <div>{{ item }}</div>
-        {% endfor %}
-      {% endfor %}
+  <header class="top">
+    <div class="brand">
+      <svg width="42" height="42" viewBox="0 0 42 42" aria-hidden="true">
+        <circle cx="21" cy="21" r="19" fill="none" stroke="#6d4a9e" stroke-width="1.5"/>
+        <circle cx="21" cy="21" r="12" fill="none" stroke="#163021" stroke-width="1.2"/>
+        <circle cx="21" cy="21" r="5" fill="none" stroke="#163021" stroke-width="1.2"/>
+        <path d="M21 21 L21 2 A19 19 0 0 1 38.5 13.6 Z" fill="#39ff88" opacity="0.28"/>
+        <line x1="21" y1="21" x2="38.5" y2="13.6" stroke="#39ff88" stroke-width="1.6"/>
+        <circle cx="29" cy="12" r="2" fill="#39ff88"/>
+        <circle cx="13" cy="27" r="1.6" fill="#bb86fc"/>
+      </svg>
+      <div>
+        <h1>KITT THREAT RADAR</h1>
+        <div class="sub">KNOWLEDGE &amp; INTELLIGENCE THREAT TRACKER</div>
+      </div>
     </div>
-    {% endif %}
-
-    <div class="feed-meta">
-      Source: {{ feed.source }} | Published: {{ feed.published }}
+    <div class="sys">
+      <span class="pill" id="sysPill"><span class="dot"></span><span id="sysText">CONNECTING</span></span>
+      <span class="meta">LAST SWEEP <b id="lastSweep">—</b></span>
+      <span class="meta">NEXT SWEEP <b id="nextSweep">—</b></span>
     </div>
-  </div>
-{% endfor %}
+  </header>
+
+  <section class="console">
+    <div class="panel radar-panel">
+      <div>
+        <div class="panel-title"><span>Threat radar · last <b>{{ max_age_days }}</b> days</span><span id="radarCount"></span></div>
+        <div class="radar-box" id="radarBox">
+          <canvas id="radar" aria-label="Radar of recent threat intelligence articles. Center is newest."></canvas>
+          <div class="radar-tip" id="radarTip"></div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#39ff88;box-shadow:0 0 6px #39ff88"></i>Article with IOCs</span>
+          <span><i style="background:#ffc23d"></i>Mentions CVEs</span>
+          <span><i style="background:#187a42"></i>No IOCs</span>
+          <span>Center = newest · each slice = one source</span>
+        </div>
+      </div>
+      <aside class="contact" id="contact">
+        <div class="panel-title">Contact</div>
+        <div class="empty">Click a blip on the radar to inspect that article. Bigger blips carry more indicators.</div>
+      </aside>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>System status</span><button class="btn sm" id="sweepBtn" type="button">Sweep now</button></div>
+      <div class="stats" id="stats"></div>
+      <div class="panel-title" style="margin-top:18px"><span>Indicators by type</span><span>click to explore</span></div>
+      <div class="bars" id="bars"></div>
+      <div class="fetchline" id="fetchline"></div>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="monitor" aria-selected="true">MONITOR</button>
+    <button class="tab" role="tab" data-tab="discover" aria-selected="false">DISCOVER</button>
+    <button class="tab" role="tab" data-tab="investigate" aria-selected="false">INVESTIGATE</button>
+    <button class="tab" role="tab" data-tab="ahead" aria-selected="false">STAY AHEAD</button>
+  </nav>
+
+  <!-- MONITOR -->
+  <section class="view" id="view-monitor">
+    <div class="controls">
+      <input class="input grow" id="mSearch" type="search" placeholder="Search titles, summaries, indicators…">
+      <select class="select" id="mCategory"><option value="">All categories</option></select>
+      <select class="select" id="mSource"><option value="">All sources</option></select>
+      <button class="btn" id="mIocs" type="button" aria-pressed="false">IOCs only</button>
+      <span class="count" id="mCount"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- DISCOVER -->
+  <section class="view" id="view-discover" hidden>
+    <div class="controls">
+      <input class="input grow" id="dSearch" type="search" placeholder="Search indicators…">
+      <select class="select" id="dSort">
+        <option value="count">Most reported</option>
+        <option value="recent">Most recent</option>
+        <option value="alpha">A–Z</option>
+      </select>
+      <span class="count" id="dCount"></span>
+    </div>
+    <div class="controls" id="dTypes"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Indicator</th><th style="text-align:right">Reports</th><th>Sources</th><th>Last seen</th><th></th></tr></thead>
+        <tbody id="dRows"></tbody>
+      </table>
+    </div>
+    <div class="more"><button class="btn" id="dMore" type="button" hidden>Show more</button></div>
+  </section>
+
+  <!-- INVESTIGATE -->
+  <section class="view" id="view-investigate" hidden>
+    <div class="controls">
+      <input class="input grow" id="iSearch" list="iList" placeholder="Enter or pick an indicator (IP, domain, hash, CVE…)">
+      <datalist id="iList"></datalist>
+      <button class="btn" id="iGo" type="button">Investigate</button>
+    </div>
+    <div id="iBody"></div>
+  </section>
+
+  <!-- STAY AHEAD -->
+  <section class="view" id="view-ahead" hidden>
+    <div class="ahead">
+      <div class="panel">
+        <div class="panel-title">Export · CSV</div>
+        <p>One row per article that has indicators, with every IOC type in its own column. Opens in Excel or imports into a SIEM.</p>
+        <a class="btn" href="/export/csv">Download CSV</a>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Export · STIX 2.1</div>
+        <p>A STIX bundle with one indicator object per IOC, for threat intel platforms and TAXII workflows.</p>
+        <a class="btn" href="/export/stix">Download STIX</a>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Sweep</div>
+        <p id="sweepInfo">KITT fetches every source automatically. Run a sweep now to pull new articles immediately.</p>
+        <button class="btn" id="sweepBtn2" type="button">Sweep now</button>
+      </div>
+    </div>
+
+    <div class="section-title">Feed health</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Source</th><th>Category</th><th>Last success</th><th style="text-align:right">New last sweep</th><th>Status</th></tr></thead>
+        <tbody id="healthRows"></tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Ignore list</div>
+    <div class="panel">
+      <p style="color:var(--muted);font-size:.84rem;line-height:1.5;margin:0 0 12px">Ignored indicators are hidden everywhere, including exports. Use <b style="color:var(--text)">Ignore</b> in Discover or Investigate to add one; click × to bring it back. Private and loopback IPs are always ignored. Domain rules (each covers its subdomains) live in <code>ioc_ignore.yaml</code> in the project folder.</p>
+      <div class="panel-title" style="margin-bottom:8px">Ignored values <span id="ignoreCount"></span></div>
+      <div class="ignore-list" id="ignoreValues"></div>
+      <details style="margin-top:14px"><summary class="panel-title" style="cursor:pointer;margin:0">Ignored domains <span id="ignoreDomainCount"></span></summary>
+        <div class="ignore-list" id="ignoreDomains" style="margin-top:10px"></div></details>
+    </div>
+
+    <div class="section-title">Sweep history</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Started</th><th style="text-align:right">Duration</th><th style="text-align:right">New articles</th><th>Failed sources</th></tr></thead>
+        <tbody id="historyRows"></tbody>
+      </table>
+    </div>
+  </section>
+
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const categoryFilter = document.getElementById("categoryFilter");
-  const sourceFilter = document.getElementById("sourceFilter");
-  const iocToggle = document.getElementById("iocToggle");
-  const feedGrid = document.getElementById("feedGrid");
+(function () {
+  "use strict";
 
-  let onlyIocs = false;
+  // ---------------------------------------------------------------- state
+  const S = {
+    feed: [], iocs: [], stats: null, status: null, latest: null, ignore: { domains: [], values: [] },
+    tab: "monitor",
+    m: { q: "", category: "", source: "", iocsOnly: false },
+    d: { q: "", type: "", sort: "count", limit: 200 },
+    inv: null,               // {type, value}
+    selected: null,          // feed index highlighted on radar
+  };
+  const IOC_LABEL = { ip: "IP", domain: "Domain", email: "Email", md5: "MD5", sha1: "SHA1", sha256: "SHA256",
+                      cve: "CVE", file_path: "File path", service: "Service", registry: "Registry", mutex: "Mutex" };
 
-  function applyFilters() {
-    const category = categoryFilter.value;
-    const source = sourceFilter.value;
+  // ---------------------------------------------------------------- helpers
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const safeUrl = (u) => /^https?:\/\//i.test(u || "") ? u : "#";
+  const label = (t) => IOC_LABEL[t] || t;
+  const parseDate = (s) => { const t = Date.parse(s || ""); return isNaN(t) ? null : t; };
+  function ago(ms) {
+    if (ms == null) return "—";
+    const s = Math.round((Date.now() - ms) / 1000);
+    if (s < 0) return "in " + until(ms);
+    if (s < 60) return "just now";
+    const m = Math.round(s / 60); if (m < 60) return m + "m ago";
+    const h = Math.round(m / 60); if (h < 48) return h + "h ago";
+    return Math.round(h / 24) + "d ago";
+  }
+  function until(ms) {
+    const s = Math.max(0, Math.round((ms - Date.now()) / 1000));
+    const m = Math.round(s / 60);
+    return m < 1 ? "<1m" : m < 60 ? m + "m" : Math.round(m / 60) + "h";
+  }
+  function iocTotal(e) { let n = 0; for (const k in (e.iocs || {})) n += e.iocs[k].length; return n; }
+  function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600); }
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); toast("Copied " + (text.length > 40 ? text.slice(0, 40) + "…" : text)); }
+    catch (e) { toast("Copy not available"); }
+  }
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem("kitt." + k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem("kitt." + k, JSON.stringify(v)); } catch (e) {} },
+  };
+  async function getJSON(url) { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(url + " " + r.status); return r.json(); }
 
-    document.querySelectorAll(".feed-card").forEach(card => {
-      const matchCategory =
-        category === "all" || card.dataset.category === category;
-      const matchSource =
-        source === "all" || card.dataset.source === source;
-      const matchIocs =
-        !onlyIocs || card.dataset.hasIocs === "true";
-
-      card.style.display =
-        (matchCategory && matchSource && matchIocs)
-          ? "block"
-          : "none";
-    });
+  // ---------------------------------------------------------------- data
+  async function loadAll() {
+    const [feed, iocs, stats, status, ignore] = await Promise.all([
+      getJSON("/api/feed"), getJSON("/api/iocs"), getJSON("/api/stats"), getJSON("/api/status"), getJSON("/api/ignore")]);
+    S.ignore = ignore;
+    const prevLatest = S.latest;
+    S.feed = feed; S.iocs = iocs; S.stats = stats; S.status = status;
+    S.latest = feed.length ? feed[0].link : null;
+    S.feed.forEach((e) => { e._t = parseDate(e.published); e._n = iocTotal(e); e._cve = !!(e.iocs && e.iocs.cve); });
+    buildRadar();
+    renderHeader(); renderStats(); renderFilters();
+    renderMonitor(prevLatest); renderDiscover(); renderInvestigate(); renderAhead();
   }
 
-  categoryFilter.addEventListener("change", applyFilters);
-  sourceFilter.addEventListener("change", applyFilters);
-  iocToggle.addEventListener("click", function () {
-    onlyIocs = !onlyIocs;
-    iocToggle.textContent = onlyIocs
-      ? "Show All Entries"
-      : "Only Show Entries With IOCs";
-    applyFilters();
-  });
-
-  // -------------------------
-  // Auto-refresh when new articles arrive
-  // -------------------------
-  const STATE_KEY = "tif-view-state";
-  const loadedLatest = {{ latest|tojson }};
-  // Poll every 30s while the first fetch is running, then every 5 minutes
-  const pollMs = {{ 30000 if fetching else 300000 }};
-
-  // Restore filters and scroll position saved before an auto-reload
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) || "null");
-    if (saved) {
-      sessionStorage.removeItem(STATE_KEY);
-      if ([...categoryFilter.options].some(o => o.value === saved.category)) {
-        categoryFilter.value = saved.category;
-      }
-      if ([...sourceFilter.options].some(o => o.value === saved.source)) {
-        sourceFilter.value = saved.source;
-      }
-      onlyIocs = !!saved.onlyIocs;
-      iocToggle.textContent = onlyIocs
-        ? "Show All Entries"
-        : "Only Show Entries With IOCs";
-      applyFilters();
-      window.scrollTo(0, saved.scrollY || 0);
+  async function poll() {
+    try {
+      const [count, status] = await Promise.all([getJSON("/api/feed/count"), getJSON("/api/status")]);
+      S.status = status; renderHeader(); renderAhead();
+      if (count.latest !== S.latest) await loadAll();
+    } catch (e) {
+      setPill("bad", "OFFLINE");
     }
-  } catch (e) {}
+    setTimeout(poll, S.status && S.status.fetching ? 15000 : 60000);
+  }
 
-  setInterval(function () {
-    fetch("/api/feed/count")
-      .then(response => response.json())
-      .then(data => {
-        if (data.latest && data.latest !== loadedLatest) {
-          try {
-            sessionStorage.setItem(STATE_KEY, JSON.stringify({
-              category: categoryFilter.value,
-              source: sourceFilter.value,
-              onlyIocs: onlyIocs,
-              scrollY: window.scrollY
-            }));
-          } catch (e) {}
-          window.location.reload();
-        }
-      })
-      .catch(() => {}); // server restarting; try again next tick
-  }, pollMs);
-});
+  // ---------------------------------------------------------------- header & stats
+  function setPill(kind, text) { const p = $("sysPill"); p.className = "pill" + (kind ? " " + kind : ""); $("sysText").textContent = text; }
+  function renderHeader() {
+    const st = S.status; if (!st) return;
+    const last = st.last_fetch ? parseDate(st.last_fetch.finished || st.last_fetch.started) : null;
+    const stale = last && Date.now() - last > (st.interval_hours * 2 + 0.5) * 3600e3;
+    if (st.fetching) setPill("busy", "SWEEPING");
+    else if (!last) setPill("warn", "AWAITING FIRST SWEEP");
+    else if (stale) setPill("bad", "SWEEP OVERDUE");
+    else setPill("", "SYSTEMS ONLINE");
+    $("lastSweep").textContent = last ? ago(last) : "—";
+    $("nextSweep").textContent = st.next_fetch ? "in " + until(parseDate(st.next_fetch)) : "—";
+    $("fetchline").innerHTML = st.fetching
+      ? "Sweeping <b>" + esc(st.fetching_source || "sources") + "</b>… new articles appear as each source finishes."
+      : st.last_fetch ? "Last sweep found " + st.last_fetch.new + " new article" + (st.last_fetch.new === 1 ? "" : "s")
+        + (st.last_fetch.failed.length ? " · " + st.last_fetch.failed.length + " source(s) failed" : "") + "." : "";
+    ["sweepBtn", "sweepBtn2"].forEach((id) => { $(id).disabled = !!st.fetching; $(id).textContent = st.fetching ? "Sweeping…" : "Sweep now"; });
+  }
+
+  function renderStats() {
+    const s = S.stats; if (!s) return;
+    const tiles = [
+      ["Feeds online", s.feeds_healthy + "<small> / " + s.feeds_configured + "</small>", "fetched OK last sweep"],
+      ["Articles", s.articles, "last " + (S.status ? S.status.max_age_days : 30) + " days"],
+      ["New · 24h", s.articles_24h, "published in the last day"],
+      ["Unique IOCs", s.iocs_unique, "across " + s.articles_with_iocs + " articles"],
+    ];
+    $("stats").innerHTML = tiles.map(([l, v, h]) =>
+      `<div class="stat"><div class="label">${l}</div><div class="value">${v}</div><div class="hint">${esc(h)}</div></div>`).join("");
+    const types = Object.entries(s.iocs_by_type).sort((a, b) => b[1] - a[1]);
+    const max = types.length ? types[0][1] : 1;
+    $("bars").innerHTML = types.length ? types.map(([t, n]) =>
+      `<button class="bar" type="button" data-type="${esc(t)}"><span class="bar-label">${esc(label(t))}</span>
+       <span class="bar-track"><span class="bar-fill" style="display:block;width:${Math.max(2, n / max * 100)}%"></span></span>
+       <span class="bar-num">${n}</span></button>`).join("") : '<div class="empty">No indicators yet.</div>';
+  }
+
+  // ---------------------------------------------------------------- tabs
+  function setTab(tab, push) {
+    S.tab = tab; store.set("tab", tab);
+    document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === tab));
+    document.querySelectorAll(".view").forEach((v) => v.hidden = v.id !== "view-" + tab);
+    if (push !== false && location.hash !== "#" + tab) { try { history.replaceState(null, "", "#" + tab); } catch (e) {} }
+  }
+
+  // ---------------------------------------------------------------- monitor
+  function renderFilters() {
+    const cats = [...new Set(S.feed.map((e) => e.category || "Unknown"))].sort();
+    const srcs = [...new Set(S.feed.map((e) => e.source || "Unknown"))].sort();
+    fillSelect($("mCategory"), cats, "All categories", S.m.category);
+    fillSelect($("mSource"), srcs, "All sources", S.m.source);
+  }
+  function fillSelect(sel, values, allLabel, current) {
+    sel.innerHTML = `<option value="">${allLabel}</option>` + values.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    sel.value = values.includes(current) ? current : "";
+  }
+  function matchesMonitor(e) {
+    const m = S.m;
+    if (m.category && (e.category || "Unknown") !== m.category) return false;
+    if (m.source && (e.source || "Unknown") !== m.source) return false;
+    if (m.iocsOnly && !e._n) return false;
+    if (m.q) {
+      const q = m.q.toLowerCase();
+      if (!e._hay) e._hay = [e.title, e.summary, e.source, ...Object.values(e.iocs || {}).flat()].join(" ").toLowerCase();
+      if (!e._hay.includes(q)) return false;
+    }
+    return true;
+  }
+  function cardHTML(e, i, isNew) {
+    const iocs = e.iocs || {};
+    const types = Object.keys(iocs);
+    const chips = types.map((t) => `<span class="chip${t === "cve" ? " cve" : ""}">${esc(label(t))} ${iocs[t].length}</span>`).join("");
+    const groups = types.map((t) => `<div class="ioc-group"><div class="type">${esc(label(t))}</div>` +
+      iocs[t].map((v) => `<button class="ioc-link" type="button" data-inv-type="${esc(t)}" data-inv-value="${esc(v)}">${esc(v)}</button>`).join("") + "</div>").join("");
+    return `<article class="card${isNew ? " flash" : ""}" id="card-${i}">
+      <div class="meta"><span class="cat">${esc(e.category || "Unknown")}</span><span>${esc(e.source || "")}</span><span>${e._t ? ago(e._t) : esc(e.published || "")}</span></div>
+      <h2><a href="${esc(safeUrl(e.link))}" target="_blank" rel="noopener">${esc(e.title || "(untitled)")}</a></h2>
+      ${e.summary ? `<p>${esc(e.summary)}</p>` : ""}
+      ${types.length ? `<div class="chips">${chips}</div><details class="iocs"><summary>${e._n} indicator${e._n === 1 ? "" : "s"}</summary>${groups}</details>` : ""}
+    </article>`;
+  }
+  function renderMonitor(prevLatest) {
+    const shown = [];
+    let newBoundary = prevLatest ? S.feed.findIndex((e) => e.link === prevLatest) : -1;
+    S.feed.forEach((e, i) => { if (matchesMonitor(e)) shown.push(cardHTML(e, i, newBoundary > 0 && i < newBoundary)); });
+    $("cards").innerHTML = shown.length ? shown.join("")
+      : `<div class="empty-state">${S.feed.length ? "No articles match these filters." : "No articles yet. The first sweep is running; articles appear as each source finishes."}</div>`;
+    $("mCount").textContent = shown.length + " of " + S.feed.length + " articles";
+  }
+
+  // ---------------------------------------------------------------- discover
+  function renderDiscover() {
+    const d = S.d;
+    const counts = {};
+    S.iocs.forEach((r) => counts[r.type] = (counts[r.type] || 0) + 1);
+    $("dTypes").innerHTML = `<button class="btn sm${d.type ? "" : " on"}" type="button" data-dtype="">All ${S.iocs.length}</button>` +
+      Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) =>
+        `<button class="btn sm${d.type === t ? " on" : ""}" type="button" data-dtype="${esc(t)}">${esc(label(t))} ${n}</button>`).join("");
+    const q = d.q.toLowerCase();
+    let rows = S.iocs.filter((r) => (!d.type || r.type === d.type) && (!q || r.value.toLowerCase().includes(q)));
+    if (d.sort === "recent") rows = rows.slice().sort((a, b) => (b.last_seen || "").localeCompare(a.last_seen || ""));
+    if (d.sort === "alpha") rows = rows.slice().sort((a, b) => a.value.localeCompare(b.value));
+    $("dCount").textContent = rows.length + " indicator" + (rows.length === 1 ? "" : "s");
+    $("dRows").innerHTML = rows.length ? rows.slice(0, d.limit).map((r) => `<tr>
+        <td class="nowrap"><span class="chip${r.type === "cve" ? " cve" : ""}">${esc(label(r.type))}</span></td>
+        <td class="mono">${esc(r.value)}</td>
+        <td class="num">${r.count}</td>
+        <td>${esc(r.sources.slice(0, 3).join(", "))}${r.sources.length > 3 ? " +" + (r.sources.length - 3) : ""}</td>
+        <td class="nowrap">${r.last_seen ? ago(parseDate(r.last_seen)) : "—"}</td>
+        <td class="nowrap"><button class="btn sm" type="button" data-copy="${esc(r.value)}">Copy</button>
+            <button class="btn sm" type="button" data-inv-type="${esc(r.type)}" data-inv-value="${esc(r.value)}">Investigate</button>
+            <button class="btn sm ghost" type="button" data-ignore="${esc(r.value)}" title="Hide this indicator everywhere">Ignore</button></td>
+      </tr>`).join("")
+      : `<tr><td colspan="6"><div class="empty-state" style="border:0">No indicators match.</div></td></tr>`;
+    $("dMore").hidden = rows.length <= d.limit;
+    $("dMore").textContent = "Show more (" + (rows.length - d.limit) + " left)";
+  }
+
+  // ---------------------------------------------------------------- investigate
+  function findIoc(value, type) {
+    const v = value.trim().toLowerCase();
+    return S.iocs.find((r) => r.value.toLowerCase() === v && (!type || r.type === type)) || null;
+  }
+  function investigate(type, value) {
+    S.inv = { type, value }; $("iSearch").value = value; setTab("investigate"); renderInvestigate();
+    window.scrollTo({ top: document.querySelector(".tabs").offsetTop - 10, behavior: "smooth" });
+  }
+  function renderInvestigate() {
+    const list = $("iList");
+    if (list.childElementCount !== Math.min(S.iocs.length, 3000))
+      list.innerHTML = S.iocs.slice(0, 3000).map((r) => `<option value="${esc(r.value)}">${esc(label(r.type))}</option>`).join("");
+    const body = $("iBody");
+    if (!S.inv) {
+      const top = S.iocs.slice(0, 12);
+      body.innerHTML = `<div class="panel"><div class="panel-title">Most reported indicators</div>
+        <p style="color:var(--muted);font-size:.85rem;margin:0 0 12px">Pick one, search above, or click any indicator on a card or in Discover.</p>
+        <div class="related">${top.map((r) => `<button class="btn sm" type="button" data-inv-type="${esc(r.type)}" data-inv-value="${esc(r.value)}">${esc(r.value)} · ${r.count}</button>`).join("") || "No indicators yet."}</div></div>`;
+      return;
+    }
+    const r = findIoc(S.inv.value, S.inv.type) || findIoc(S.inv.value);
+    if (!r) {
+      const ignored = S.ignore.values.includes(S.inv.value.trim().toLowerCase());
+      body.innerHTML = ignored
+        ? `<div class="empty-state">${esc(S.inv.value)} is on your ignore list. <button class="btn sm" type="button" data-unignore="${esc(S.inv.value.trim().toLowerCase())}">Stop ignoring</button></div>`
+        : `<div class="empty-state">${esc(S.inv.value)} isn't in any article from the last ${S.status ? S.status.max_age_days : 30} days.</div>`;
+      return;
+    }
+    const articles = r.articles.map((i) => S.feed[i]).filter(Boolean);
+    // indicators that appear in the same articles
+    const co = new Map();
+    r.articles.forEach((i) => {
+      const e = S.feed[i]; if (!e) return;
+      for (const t in (e.iocs || {})) for (const v of e.iocs[t]) {
+        if (t === r.type && v === r.value) continue;
+        const k = t + "\u0000" + v; co.set(k, (co.get(k) || 0) + 1);
+      }
+    });
+    const related = [...co.entries()].sort((a, b) => b[1] - a[1]).slice(0, 24);
+    body.innerHTML = `
+      <div class="inv-head"><span class="chip${r.type === "cve" ? " cve" : ""}">${esc(label(r.type))}</span>
+        <span class="value">${esc(r.value)}</span>
+        <button class="btn sm" type="button" data-copy="${esc(r.value)}">Copy</button>
+        <button class="btn sm ghost" type="button" data-ignore="${esc(r.value)}" title="Hide this indicator everywhere">Ignore</button></div>
+      <div class="facts">
+        <div class="stat"><div class="label">Reported in</div><div class="value">${r.count}</div><div class="hint">article${r.count === 1 ? "" : "s"}</div></div>
+        <div class="stat"><div class="label">Sources</div><div class="value">${r.sources.length}</div><div class="hint">${esc(r.sources.join(", "))}</div></div>
+        <div class="stat"><div class="label">First seen</div><div class="value" style="font-size:1.1rem">${r.first_seen ? ago(parseDate(r.first_seen)) : "—"}</div><div class="hint">${r.first_seen ? esc(new Date(r.first_seen).toLocaleString()) : "undated"}</div></div>
+        <div class="stat"><div class="label">Last seen</div><div class="value" style="font-size:1.1rem">${r.last_seen ? ago(parseDate(r.last_seen)) : "—"}</div><div class="hint">${r.last_seen ? esc(new Date(r.last_seen).toLocaleString()) : "undated"}</div></div>
+      </div>
+      <div class="grid-2">
+        <div><div class="section-title" style="margin-top:0">Appears in</div><div class="list">${articles.map((e) => `
+          <div class="list-item"><a href="${esc(safeUrl(e.link))}" target="_blank" rel="noopener">${esc(e.title)}</a>
+          <div class="meta">${esc(e.source)} · ${e._t ? ago(e._t) : esc(e.published || "")}</div></div>`).join("")}</div></div>
+        <div><div class="section-title" style="margin-top:0">Reported alongside</div>
+          <div class="related">${related.length ? related.map(([k, n]) => { const [t, v] = k.split("\u0000");
+            return `<button class="btn sm" type="button" data-inv-type="${esc(t)}" data-inv-value="${esc(v)}" title="${esc(label(t))}">${esc(v)}${n > 1 ? " · " + n : ""}</button>`; }).join("")
+            : '<span style="color:var(--muted);font-size:.85rem">No other indicators in these articles.</span>'}</div></div>
+      </div>`;
+  }
+
+  // ---------------------------------------------------------------- stay ahead
+  function renderIgnore() {
+    const ig = S.ignore;
+    $("ignoreCount").textContent = "(" + ig.values.length + ")";
+    $("ignoreDomainCount").textContent = "(" + ig.domains.length + ")";
+    $("ignoreValues").innerHTML = ig.values.length ? ig.values.map((v) =>
+      `<span class="ignore-item">${esc(v)}<button type="button" data-unignore="${esc(v)}" title="Stop ignoring" aria-label="Stop ignoring ${esc(v)}">×</button></span>`).join("")
+      : '<span style="color:var(--muted);font-size:.85rem">Nothing ignored yet.</span>';
+    $("ignoreDomains").innerHTML = ig.domains.map((d) => `<span class="ignore-item domain">${esc(d)}</span>`).join("");
+  }
+
+  async function changeIgnore(value, add) {
+    try {
+      const r = await fetch("/api/ignore", { method: add ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value }) });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || r.status);
+      toast(add ? "Ignoring " + value : "No longer ignoring " + value);
+      await loadAll();
+    } catch (e) { toast("Couldn't update the ignore list"); }
+  }
+
+  function renderAhead() {
+    renderIgnore();
+    const st = S.status; if (!st) return;
+    $("sweepInfo").textContent = `KITT sweeps all ${st.sources.length} sources every ${st.interval_hours === 1 ? "hour" : st.interval_hours + " hours"}`
+      + (st.next_fetch ? ` (next in ${until(parseDate(st.next_fetch))})` : "") + ". Run a sweep now to pull new articles immediately.";
+    $("healthRows").innerHTML = st.sources.map((s) => {
+      const cls = s.ok === true ? "ok" : s.ok === false ? "bad" : "";
+      const txt = s.ok === true ? "OK" : s.ok === false ? "Failed" : "Not swept yet";
+      return `<tr><td><span class="status-dot ${cls}"></span>${esc(s.name)}</td><td>${esc(s.category)}</td>
+        <td class="nowrap">${s.last_success ? ago(parseDate(s.last_success)) : "—"}</td>
+        <td class="num">${s.last_new ?? "—"}</td>
+        <td>${txt}${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}</td></tr>`;
+    }).join("");
+    $("historyRows").innerHTML = st.history.length ? st.history.map((h) => {
+      const a = parseDate(h.started), b = parseDate(h.finished);
+      const dur = a && b ? Math.round((b - a) / 1000) : null;
+      return `<tr><td class="nowrap">${a ? esc(new Date(a).toLocaleString()) : "—"}</td>
+        <td class="num">${dur == null ? "running" : dur < 90 ? dur + "s" : Math.round(dur / 60) + "m"}</td>
+        <td class="num">${h.new}</td><td>${h.failed.length ? esc(h.failed.join(", ")) : "—"}</td></tr>`;
+    }).join("") : `<tr><td colspan="4"><div class="empty-state" style="border:0">No sweeps recorded yet.</div></td></tr>`;
+  }
+
+  async function sweepNow() {
+    try {
+      const r = await fetch("/api/refresh", { method: "POST" });
+      toast(r.status === 202 ? "Sweep started" : "A sweep is already running");
+      S.status = await getJSON("/api/status"); renderHeader(); renderAhead();
+    } catch (e) { toast("Couldn't start a sweep"); }
+  }
+
+  // ---------------------------------------------------------------- radar
+  const R = { blips: [], angle: -Math.PI / 2, last: 0, size: 0, hover: -1 };
+  const canvas = $("radar"), ctx = canvas.getContext("2d");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function buildRadar() {
+    const sources = [...new Set(S.feed.map((e) => e.source || "Unknown"))].sort();
+    const slice = (Math.PI * 2) / Math.max(1, sources.length);
+    const maxAge = (S.status ? S.status.max_age_days : 30) * 864e5;
+    R.blips = S.feed.map((e, i) => {
+      const si = sources.indexOf(e.source || "Unknown");
+      const a = slice * si + slice * (0.12 + 0.76 * hash(e.link || String(i)));
+      const age = e._t ? Math.min(1, Math.max(0, (Date.now() - e._t) / maxAge)) : 1;
+      return { i, a, r: 0.06 + 0.9 * Math.sqrt(age), size: 2.2 + Math.min(e._n, 30) / 6,
+               color: e._cve ? "#ffc23d" : e._n ? "#39ff88" : "#187a42" };
+    });
+    $("radarCount").textContent = S.feed.length + " contacts";
+  }
+
+  function resize() {
+    const box = $("radarBox").getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    R.size = box.width;
+    canvas.width = Math.round(box.width * dpr); canvas.height = Math.round(box.width * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw(ts) {
+    const dt = R.last ? Math.min(100, ts - R.last) : 16; R.last = ts;
+    if (!reduceMotion) R.angle = (R.angle + dt * (Math.PI * 2 / 5000)) % (Math.PI * 2);
+    const W = R.size, c = W / 2, rad = W / 2 - 6;
+    if (rad < 20) { requestAnimationFrame(draw); return; }   // hidden or not laid out yet
+    ctx.clearRect(0, 0, W, W);
+
+    // scope background
+    const bg = ctx.createRadialGradient(c, c, 0, c, c, rad);
+    bg.addColorStop(0, "rgba(57,255,136,0.08)"); bg.addColorStop(1, "rgba(57,255,136,0.01)");
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(c, c, rad, 0, Math.PI * 2); ctx.fill();
+
+    // rings (age bands) + labels
+    const days = S.status ? S.status.max_age_days : 30;
+    ctx.lineWidth = 1; ctx.font = Math.max(10, Math.round(W / 60)) + "px " + getComputedStyle(document.body).getPropertyValue("--mono");
+    [1, 3, 7, 14, days].filter((d, k, arr) => d <= days && arr.indexOf(d) === k).forEach((d) => {
+      const rr = rad * (0.06 + 0.9 * Math.sqrt(Math.min(1, d / days)));
+      ctx.strokeStyle = d === days ? "rgba(187,134,252,0.45)" : "rgba(57,255,136,0.13)";
+      ctx.beginPath(); ctx.arc(c, c, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "rgba(187,134,252,0.85)"; ctx.fillText(d + "d", c + 4, c - rr + 12);
+    });
+    ctx.strokeStyle = "rgba(57,255,136,0.1)";
+    ctx.beginPath(); ctx.moveTo(c - rad, c); ctx.lineTo(c + rad, c); ctx.moveTo(c, c - rad); ctx.lineTo(c, c + rad); ctx.stroke();
+    for (let k = 0; k < 72; k++) {   // bezel ticks
+      const a = k * Math.PI / 36, l = k % 6 === 0 ? 8 : 4;
+      ctx.beginPath(); ctx.moveTo(c + Math.cos(a) * rad, c + Math.sin(a) * rad);
+      ctx.lineTo(c + Math.cos(a) * (rad - l), c + Math.sin(a) * (rad - l)); ctx.stroke();
+    }
+
+    // sweep trail
+    const trail = Math.PI / 2.2, steps = 36;
+    for (let k = 0; k < steps; k++) {
+      const a1 = R.angle - trail * (k / steps), a0 = R.angle - trail * ((k + 1) / steps);
+      ctx.fillStyle = `rgba(57,255,136,${0.22 * Math.pow(1 - k / steps, 2)})`;
+      ctx.beginPath(); ctx.moveTo(c, c); ctx.arc(c, c, rad, a0, a1); ctx.closePath(); ctx.fill();
+    }
+    ctx.strokeStyle = "rgba(57,255,136,0.9)"; ctx.lineWidth = 1.5; ctx.shadowColor = "#39ff88"; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(c, c); ctx.lineTo(c + Math.cos(R.angle) * rad, c + Math.sin(R.angle) * rad); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // blips: brightest just after the sweep passes, fading over one rotation
+    for (const b of R.blips) {
+      const x = c + Math.cos(b.a) * b.r * rad, y = c + Math.sin(b.a) * b.r * rad;
+      let since = (R.angle - b.a) % (Math.PI * 2); if (since < 0) since += Math.PI * 2;
+      const glow = reduceMotion ? 0.8 : 0.22 + 0.78 * Math.exp(-since * 0.9);
+      const sel = b.i === S.selected, hov = b.i === R.hover;
+      ctx.globalAlpha = sel || hov ? 1 : glow;
+      ctx.fillStyle = b.color; ctx.shadowColor = b.color; ctx.shadowBlur = (sel || hov ? 16 : 10) * glow;
+      ctx.beginPath(); ctx.arc(x, y, b.size + (sel || hov ? 1.5 : 0), 0, Math.PI * 2); ctx.fill();
+      if (sel) { ctx.shadowBlur = 0; ctx.strokeStyle = "#bb86fc"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, b.size + 6, 0, Math.PI * 2); ctx.stroke(); }
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+    // center
+    ctx.fillStyle = "#bb86fc"; ctx.shadowColor = "#bb86fc"; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(c, c, 3, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    requestAnimationFrame(draw);
+  }
+
+  function blipAt(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const x = evt.clientX - rect.left, y = evt.clientY - rect.top;
+    const c = R.size / 2, rad = R.size / 2 - 6;
+    let best = -1, bestD = 12;
+    for (const b of R.blips) {
+      const bx = c + Math.cos(b.a) * b.r * rad, by = c + Math.sin(b.a) * b.r * rad;
+      const d = Math.hypot(bx - x, by - y) - b.size;
+      if (d < bestD) { bestD = d; best = b.i; }
+    }
+    return { i: best, x, y };
+  }
+  canvas.addEventListener("mousemove", (evt) => {
+    const { i, x, y } = blipAt(evt); R.hover = i;
+    const tip = $("radarTip");
+    if (i < 0) { tip.style.display = "none"; canvas.style.cursor = "crosshair"; return; }
+    const e = S.feed[i]; canvas.style.cursor = "pointer";
+    tip.innerHTML = `<div class="t-src">${esc(e.source)} · ${e._t ? ago(e._t) : "undated"} · ${e._n} IOCs</div>${esc(e.title)}`;
+    tip.style.display = "block";
+    tip.style.left = Math.max(0, Math.min(x + 14, R.size - tip.offsetWidth - 4)) + "px"; tip.style.top = Math.min(y + 14, R.size - 60) + "px";
+  });
+  canvas.addEventListener("mouseleave", () => { R.hover = -1; $("radarTip").style.display = "none"; });
+  canvas.addEventListener("click", (evt) => { const { i } = blipAt(evt); if (i >= 0) selectContact(i); });
+
+  function selectContact(i) {
+    S.selected = i; const e = S.feed[i];
+    const iocs = e.iocs || {};
+    const chips = Object.keys(iocs).map((t) => `<span class="chip${t === "cve" ? " cve" : ""}">${esc(label(t))} ${iocs[t].length}</span>`).join("");
+    const first = Object.keys(iocs).flatMap((t) => iocs[t].slice(0, 4).map((v) => [t, v])).slice(0, 8);
+    $("contact").innerHTML = `<div class="panel-title">Contact</div>
+      <div class="when">${esc(e.source)} · ${esc(e.category || "")} · ${e._t ? ago(e._t) : "undated"}</div>
+      <h3><a href="${esc(safeUrl(e.link))}" target="_blank" rel="noopener">${esc(e.title)}</a></h3>
+      ${chips ? `<div class="chips">${chips}</div>` : '<div class="empty">No indicators extracted from this article.</div>'}
+      <div style="margin-top:8px">${first.map(([t, v]) => `<button class="ioc-link" type="button" data-inv-type="${esc(t)}" data-inv-value="${esc(v)}">${esc(v)}</button>`).join("")}</div>
+      <div class="actions"><a class="btn sm" href="${esc(safeUrl(e.link))}" target="_blank" rel="noopener">Open article</a>
+        <button class="btn sm" type="button" data-goto-card="${i}">Show in Monitor</button></div>`;
+  }
+
+  // ---------------------------------------------------------------- events
+  document.addEventListener("click", (evt) => {
+    const t = evt.target.closest("[data-ignore],[data-unignore],[data-inv-value],[data-copy],[data-dtype],[data-type],[data-goto-card],[data-tab]");
+    if (!t) return;
+    if (t.dataset.ignore != null) return changeIgnore(t.dataset.ignore, true);
+    if (t.dataset.unignore != null) return changeIgnore(t.dataset.unignore, false);
+    if (t.dataset.tab) return setTab(t.dataset.tab);
+    if (t.dataset.copy != null) return copy(t.dataset.copy);
+    if (t.dataset.invValue != null) return investigate(t.dataset.invType, t.dataset.invValue);
+    if (t.dataset.dtype != null) { S.d.type = t.dataset.dtype; S.d.limit = 200; return renderDiscover(); }
+    if (t.dataset.type != null) { S.d.type = t.dataset.type; S.d.limit = 200; setTab("discover"); renderDiscover();
+      return window.scrollTo({ top: document.querySelector(".tabs").offsetTop - 10, behavior: "smooth" }); }
+    if (t.dataset.gotoCard != null) {
+      S.m = { q: "", category: "", source: "", iocsOnly: false };
+      $("mSearch").value = ""; $("mIocs").classList.remove("on"); renderFilters(); renderMonitor(); setTab("monitor");
+      const card = $("card-" + t.dataset.gotoCard);
+      if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash"); }
+    }
+  });
+  let mTimer;
+  $("mSearch").addEventListener("input", (e) => { clearTimeout(mTimer); mTimer = setTimeout(() => { S.m.q = e.target.value.trim(); renderMonitor(); }, 150); });
+  $("mCategory").addEventListener("change", (e) => { S.m.category = e.target.value; renderMonitor(); });
+  $("mSource").addEventListener("change", (e) => { S.m.source = e.target.value; renderMonitor(); });
+  $("mIocs").addEventListener("click", (e) => { S.m.iocsOnly = !S.m.iocsOnly; e.currentTarget.classList.toggle("on", S.m.iocsOnly); e.currentTarget.setAttribute("aria-pressed", S.m.iocsOnly); renderMonitor(); });
+  let dTimer;
+  $("dSearch").addEventListener("input", (e) => { clearTimeout(dTimer); dTimer = setTimeout(() => { S.d.q = e.target.value.trim(); S.d.limit = 200; renderDiscover(); }, 150); });
+  $("dSort").addEventListener("change", (e) => { S.d.sort = e.target.value; renderDiscover(); });
+  $("dMore").addEventListener("click", () => { S.d.limit += 300; renderDiscover(); });
+  $("iGo").addEventListener("click", () => { const v = $("iSearch").value.trim(); if (v) { const r = findIoc(v); investigate(r ? r.type : "", v); } });
+  $("iSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") $("iGo").click(); });
+  $("sweepBtn").addEventListener("click", sweepNow);
+  $("sweepBtn2").addEventListener("click", sweepNow);
+  window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (document.getElementById("view-" + h)) setTab(h, false); });
+  window.addEventListener("resize", resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe($("radarBox"));
+  setInterval(() => { renderHeader(); }, 30000);   // keep "x min ago" fresh
+
+  // ---------------------------------------------------------------- boot
+  const startTab = location.hash.slice(1) || store.get("tab") || "monitor";
+  setTab(document.getElementById("view-" + startTab) ? startTab : "monitor");
+  resize(); requestAnimationFrame(draw);
+  loadAll().catch(() => setPill("bad", "OFFLINE")).finally(() => setTimeout(poll, 15000));
+})();
 </script>
-
 </body>
 </html>

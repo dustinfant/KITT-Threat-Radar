@@ -1,17 +1,19 @@
-from flask import Flask, render_template, jsonify, send_file
+from flask import Flask, render_template, jsonify, send_file, request
 import json
 import os
 import csv
 import io
 import uuid
 import datetime
+import threading
 from urllib.parse import urlparse
 from apscheduler.schedulers.background import BackgroundScheduler
 import feedparser
 import yaml
 import requests
 
-from ioc_utils import IOC_FIELDS, clean_iocs, extract_iocs_from_html
+from ioc_utils import (IOC_FIELDS, clean_iocs, extract_iocs_from_html, ignore_signature,
+                       ignore_list, add_ignored_value, remove_ignored_value)
 
 # -------------------------
 # CONFIG
@@ -19,7 +21,10 @@ from ioc_utils import IOC_FIELDS, clean_iocs, extract_iocs_from_html
 app = Flask(__name__)
 
 DATA_FILE = "data/feed_normalized.json"
+STATUS_FILE = "data/status.json"   # per-source health + fetch history
 SOURCES_FILE = "sources.yaml"
+FETCH_INTERVAL_HOURS = 1
+HISTORY_LENGTH = 48                # fetch runs kept in status.json
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -76,7 +81,7 @@ def load_feed():
     Cached until the data file changes or the day rolls over."""
     if not os.path.exists(DATA_FILE):
         return []
-    key = (os.path.getmtime(DATA_FILE), datetime.date.today())
+    key = (os.path.getmtime(DATA_FILE), datetime.date.today(), ignore_signature())
     if _feed_cache["key"] != key:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             feed = json.load(f)
@@ -96,6 +101,57 @@ def group_by_category(feed):
 
 def has_real_iocs(entry):
     return any(entry.get("iocs", {}).get(f) for f in IOC_FIELDS)
+
+def now_iso():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+def write_json_atomic(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)   # readers never see a half-written file
+
+def load_status():
+    try:
+        with open(STATUS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"sources": {}, "history": []}
+
+_ioc_cache = {"key": None, "index": []}
+
+def build_ioc_index():
+    """One row per unique indicator: where it appeared, first/last seen. Cached with the feed."""
+    feed = load_feed()
+    key = _feed_cache["key"]
+    if _ioc_cache["key"] == key:
+        return _ioc_cache["index"]
+    index = {}
+    for i, entry in enumerate(feed):
+        dt = parse_published(entry.get("published"))
+        for ioc_type, values in (entry.get("iocs") or {}).items():
+            for value in values:
+                row = index.setdefault((ioc_type, value), {
+                    "type": ioc_type, "value": value, "articles": [],
+                    "sources": set(), "first_seen": None, "last_seen": None})
+                row["articles"].append(i)
+                row["sources"].add(entry.get("source", "Unknown"))
+                if dt:
+                    iso = dt.isoformat()
+                    if not row["first_seen"] or iso < row["first_seen"]:
+                        row["first_seen"] = iso
+                    if not row["last_seen"] or iso > row["last_seen"]:
+                        row["last_seen"] = iso
+    rows = []
+    for row in index.values():
+        row["sources"] = sorted(row["sources"])
+        row["count"] = len(row["articles"])
+        rows.append(row)
+    rows.sort(key=lambda r: r["last_seen"] or "", reverse=True)   # newest first...
+    rows.sort(key=lambda r: r["count"], reverse=True)             # ...within most-reported first
+    _ioc_cache.update(key=key, index=rows)
+    return rows
 
 # -------------------------
 # IOC EXTRACTION (logic lives in ioc_utils.py)
@@ -137,29 +193,66 @@ def fetch_rss(feed_info, known_links=frozenset()):
             "published": entry.get("published", ""),
             "source": feed_info.get("name", "Unknown"),
             "category": feed_info.get("category", "Uncategorized"),
+            "fetched_at": now_iso(),
             "iocs": extract_iocs_from_url(entry.get("link", ""))
         })
+    if not normalized and getattr(feed, "bozo", False) and not feed.entries:
+        # feedparser doesn't raise on network/parse errors; surface them as failures
+        raise RuntimeError(str(getattr(feed, "bozo_exception", "feed could not be read")))
     return normalized
 
+_fetch_lock = threading.Lock()
+_fetch_state = {"running": False, "current": None}
+
 def update_feed():
+    if not _fetch_lock.acquire(blocking=False):
+        print("[~] Fetch already running; skipping", flush=True)
+        return
+    try:
+        _fetch_state["running"] = True
+        _run_fetch()
+    finally:
+        _fetch_state.update(running=False, current=None)
+        _fetch_lock.release()
+
+def _run_fetch():
     existing = []
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             existing = json.load(f)
+
+    status = load_status()
+    run = {"started": now_iso(), "finished": None, "new": 0, "failed": []}
 
     combined = existing.copy()
     known_links = {e.get("link") for e in existing}
     sources = load_sources()
     print(f"[*] Fetching {len(sources)} sources", flush=True)
     for feed_info in sources:
+        name = feed_info.get("name", "Unknown")
+        _fetch_state["current"] = name
+        health = status["sources"].setdefault(name, {})
+        health.update(category=feed_info.get("category", "Uncategorized"), last_attempt=now_iso())
         try:
             new = fetch_rss(feed_info, known_links)
             combined += new
-            print(f"[+] {feed_info.get('name')}: {len(new)} new", flush=True)
+            run["new"] += len(new)
+            health.update(ok=True, last_success=now_iso(), last_new=len(new), error=None)
+            print(f"[+] {name}: {len(new)} new", flush=True)
         except Exception as exc:
-            print(f"[!] Failed source {feed_info.get('name')}: {exc}", flush=True)
+            run["failed"].append(name)
+            health.update(ok=False, error=str(exc)[:200])
+            print(f"[!] Failed source {name}: {exc}", flush=True)
         save_feed(combined)   # save after each source so the dashboard fills in as it goes
-    print("[*] Fetch complete", flush=True)
+        write_json_atomic(STATUS_FILE, status)
+
+    # forget sources removed from sources.yaml
+    configured = {s.get("name", "Unknown") for s in sources}
+    status["sources"] = {k: v for k, v in status["sources"].items() if k in configured}
+    run["finished"] = now_iso()
+    status["history"] = ([run] + status.get("history", []))[:HISTORY_LENGTH]
+    write_json_atomic(STATUS_FILE, status)
+    print(f"[*] Fetch complete: {run['new']} new, {len(run['failed'])} failed", flush=True)
 
 def save_feed(entries):
     """Deduplicate, drop old articles, clean IOCs, sort newest first, and write atomically."""
@@ -167,32 +260,95 @@ def save_feed(entries):
     deduped = []
     for e in entries:
         if e.get("link") not in seen_links and not is_too_old(e.get("published")):
-            e["iocs"] = clean_iocs(e.get("iocs"), e.get("link", ""))
+            # stored without the ignore list, so un-ignoring something brings it back
+            e["iocs"] = clean_iocs(e.get("iocs"), e.get("link", ""), apply_ignore=False)
             deduped.append(e)
             seen_links.add(e.get("link"))
-    deduped = newest_first(deduped)
-
-    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    tmp = DATA_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(deduped, f, indent=2)
-    os.replace(tmp, DATA_FILE)   # readers never see a half-written file
+    write_json_atomic(DATA_FILE, newest_first(deduped))
 
 # -------------------------
 # ROUTES
 # -------------------------
 @app.route("/")
 def index():
-    feed = load_feed()
-    grouped, sources = group_by_category(feed)
-    fetching = len(feed) == 0  # Banner if feed empty
-    return render_template("index.html", grouped=grouped, sources=sources, feed_list=feed,
-                           fetching=fetching, total=len(feed),
-                           latest=feed[0].get("link", "") if feed else "")
+    # The page is a shell; everything on it is loaded from the /api endpoints below
+    return render_template("index.html", max_age_days=MAX_AGE_DAYS)
 
 @app.route("/api/feed")
 def api_feed():
     return jsonify(load_feed())
+
+@app.route("/api/status")
+def api_status():
+    status = load_status()
+    sources = load_sources()
+    job = scheduler.get_job("hourly")
+    health = []
+    for s in sources:
+        name = s.get("name", "Unknown")
+        h = status["sources"].get(name, {})
+        health.append({"name": name, "category": s.get("category", "Uncategorized"),
+                       "url": s.get("url", ""), "ok": h.get("ok"),
+                       "last_success": h.get("last_success"), "last_attempt": h.get("last_attempt"),
+                       "last_new": h.get("last_new"), "error": h.get("error")})
+    history = status.get("history", [])
+    return jsonify({
+        "fetching": _fetch_state["running"],
+        "fetching_source": _fetch_state["current"],
+        "last_fetch": history[0] if history else None,
+        "next_fetch": job.next_run_time.isoformat() if getattr(job, "next_run_time", None) else None,
+        "interval_hours": FETCH_INTERVAL_HOURS,
+        "max_age_days": MAX_AGE_DAYS,
+        "sources": health,
+        "history": history,
+    })
+
+@app.route("/api/stats")
+def api_stats():
+    feed = load_feed()
+    iocs = build_ioc_index()
+    day_ago = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
+    new_24h = sum(1 for e in feed if (parse_published(e.get("published")) or day_ago) > day_ago)
+    by_type = {}
+    for row in iocs:
+        by_type[row["type"]] = by_type.get(row["type"], 0) + 1
+    status = load_status()["sources"]
+    configured = load_sources()
+    healthy = sum(1 for s in configured if status.get(s.get("name"), {}).get("ok"))
+    return jsonify({
+        "feeds_configured": len(configured),
+        "feeds_healthy": healthy,
+        "articles": len(feed),
+        "articles_24h": new_24h,
+        "articles_with_iocs": sum(1 for e in feed if has_real_iocs(e)),
+        "iocs_unique": len(iocs),
+        "iocs_by_type": by_type,
+    })
+
+@app.route("/api/iocs")
+def api_iocs():
+    # "articles" are indexes into /api/feed (same order), which the page already has
+    return jsonify(build_ioc_index())
+
+@app.route("/api/ignore", methods=["GET"])
+def api_ignore_list():
+    return jsonify(ignore_list())
+
+@app.route("/api/ignore", methods=["POST", "DELETE"])
+def api_ignore_change():
+    value = ((request.get_json(silent=True) or {}).get("value") or "").strip()
+    try:
+        changed = add_ignored_value(value) if request.method == "POST" else remove_ignored_value(value)
+    except (ValueError, OSError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "changed": changed, "ignore": ignore_list()})
+
+@app.route("/api/refresh", methods=["POST"])
+def api_refresh():
+    if _fetch_state["running"]:
+        return jsonify({"started": False, "reason": "already running"}), 409
+    threading.Thread(target=update_feed, daemon=True).start()
+    return jsonify({"started": True}), 202
 
 @app.route("/api/feed/count")
 def api_feed_count():
@@ -279,8 +435,8 @@ def export_stix():
 # SCHEDULER (non-blocking)
 # -------------------------
 scheduler = BackgroundScheduler()
-scheduler.add_job(update_feed, 'interval', hours=1)  # Hourly updates
-scheduler.add_job(update_feed, 'date', run_date=datetime.datetime.now())  # First run in background
+scheduler.add_job(update_feed, 'interval', hours=FETCH_INTERVAL_HOURS, id="hourly")  # Hourly updates
+scheduler.add_job(update_feed, 'date', run_date=datetime.datetime.now(), id="startup")  # First run in background
 scheduler.start()
 
 # -------------------------

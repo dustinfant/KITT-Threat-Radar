@@ -1,0 +1,252 @@
+{
+  "sources": {
+    "Mandiant / Google Threat Intelligence": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:17+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:18+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "CrowdStrike": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:18+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:19+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "SentinelOne": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:19+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:20+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Huntress": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:20+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:20+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Check Point Research": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:20+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:20+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Bitdefender Labs": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:20+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:21+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Symantec Enterprise Blog": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:21+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:21+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Microsoft Security Blog": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:21+00:00",
+      "ok": false,
+      "error": "text/html is not an XML media type"
+    },
+    "Rapid7 Security": {
+      "category": "Vendor",
+      "last_attempt": "2026-10-28T20:10:21+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:21+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Squiblydoo Blog": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:21+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:22+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Rogue Authority": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:22+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:22+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Securonix Blog": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:22+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:22+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Help Net Security": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:22+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:22+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Securelist (Kaspersky)": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:22+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:23+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Malwarebytes Labs": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:23+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:24+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "AdSecurity.org Blog": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:24+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:25+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Reverse.put.as Blog": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:25+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:26+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "PenTestTools Blog": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:26+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:27+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "WebSec.ca Security": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:27+00:00",
+      "ok": false,
+      "error": "<unknown>:39:50: not well-formed (invalid token)"
+    },
+    "Ubuntu Security Notices": {
+      "category": "Research",
+      "last_attempt": "2026-10-28T20:10:28+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:29+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "ZDNet Security": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:29+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:30+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "BleepingComputer": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:30+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:30+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "The Hacker News": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:30+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:30+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "HackRead": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:30+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:31+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Security Magazine - Cybersecurity": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:31+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:32+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "SecurityWeek": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:32+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:32+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "Schneier on Security": {
+      "category": "General",
+      "last_attempt": "2026-10-28T20:10:32+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:32+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "CISA Alerts": {
+      "category": "Government",
+      "last_attempt": "2026-10-28T20:10:32+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:32+00:00",
+      "last_new": 0,
+      "error": null
+    },
+    "SANS Internet Storm Center": {
+      "category": "Government",
+      "last_attempt": "2026-10-28T20:10:32+00:00",
+      "ok": true,
+      "last_success": "2026-10-28T20:10:33+00:00",
+      "last_new": 0,
+      "error": null
+    }
+  },
+  "history": [
+    {
+      "started": "2026-10-28T20:10:17+00:00",
+      "finished": "2026-10-28T20:10:33+00:00",
+      "new": 0,
+      "failed": [
+        "Microsoft Security Blog",
+        "WebSec.ca Security"
+      ]
+    },
+    {
+      "started": "2026-10-28T20:03:06+00:00",
+      "finished": "2026-10-28T20:03:22+00:00",
+      "new": 0,
+      "failed": [
+        "Microsoft Security Blog",
+        "WebSec.ca Security"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+# ===========================================
+# KITT IOC ignore list
+# ===========================================
+# Indicators listed here are hidden everywhere: dashboard, radar, Discover,
+# Investigate and both exports. Changes apply within a minute, no restart needed.
+#
+# Always ignored automatically (no need to list them):
+#   - private, loopback, link-local, multicast and reserved IPs
+#     (10.x, 192.168.x, 127.0.0.1, 0.0.0.0, documentation ranges, ...)
+#   - the article's own website
+
+# Domains: each entry also covers all of its subdomains
+# (github.com also hides gist.github.com). Also applies to emails at these domains.
+# Reference sites, social media and the feed publishers themselves.
+domains:
+  # reference / vulnerability databases
+  - cisa.gov
+  - cve.org
+  - mitre.org
+  - nist.gov
+  - first.org
+  # research tools that articles link to
+  - virustotal.com
+  - any.run
+  - urlscan.io
+  - shodan.io
+  - abuse.ch
+  # big platforms and social media
+  - github.com
+  - google.com
+  - microsoft.com
+  - apple.com
+  - youtube.com
+  - x.com
+  - twitter.com
+  - linkedin.com
+  - facebook.com
+  - instagram.com
+  - reddit.com
+  - medium.com
+  - cloudflare.com
+  - w3.org
+  - schema.org
+  - wordpress.org
+  - gravatar.com
+  # security vendors and news sites (they cite each other constantly)
+  - bleepingcomputer.com
+  - thehackernews.com
+  - securityweek.com
+  - helpnetsecurity.com
+  - paloaltonetworks.com
+  - crowdstrike.com
+  - sentinelone.com
+  - huntress.com
+  - checkpoint.com
+  - rapid7.com
+  - mandiant.com
+  - kaspersky.com
+  - securelist.com
+  - malwarebytes.com
+  - bitdefender.com
+  - broadcom.com
+  - sans.org
+  - sans.edu
+  - ubuntu.com
+  - zdnet.com
+  - hackread.com
+  - schneier.com
+  - securitymagazine.com
+  - cisco.com
+  - fortinet.com
+
+# Exact values of any type: IPs, hashes, emails, CVEs, file paths...
+# The dashboard's "Ignore" button adds entries to the end of this list.
+values:
+  - "76.243.196.145"   # embedded in Huntress page markup, not a real indicator
