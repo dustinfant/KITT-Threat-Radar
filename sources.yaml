@@ -80,10 +80,6 @@
   url: http://feeds.feedburner.com/PentestTools
   category: Research
 
-- name: WebSec.ca Security
-  url: https://websec.ca/blog_posts/index.rss
-  category: Research
-
 - name: Ubuntu Security Notices
   url: https://www.ubuntu.com/usn/atom.xml
   category: Research

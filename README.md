@@ -2,7 +2,7 @@
 
 **Knowledge & Intelligence Threat Tracker**
 
-KITT is a self-hosted threat intelligence console. It sweeps 29 security RSS feeds (vendor research, news and government advisories) every hour, extracts the IOCs from each article, and puts it all on a live radar with tools to search, investigate and export what it finds.
+KITT is a self-hosted threat intelligence console. It sweeps 28 security RSS feeds (vendor research, news and government advisories) every hour, extracts the IOCs from each article, and puts it all on a live radar with tools to search, investigate and export what it finds.
 
 Built for SOC analysts, threat hunters and blue teamers who want one place to watch the threat landscape without paying for a platform.
 
@@ -110,7 +110,7 @@ Edit `sources.yaml`. Each entry needs a name, an RSS/Atom URL and a category:
 
 With Docker, run `docker compose restart` to pick up the change.
 
-Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 11 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
+Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 10 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
 
 ## 🚫 Ignoring noisy indicators
 
