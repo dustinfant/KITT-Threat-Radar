@@ -25,3 +25,4 @@ data/feed_normalized.json
 
 # Live feed data (written by the running app)
 data/*.tmp
+data/status.json

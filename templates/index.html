@@ -694,7 +694,7 @@ td.nowrap { white-space: nowrap; }
   function buildRadar() {
     const sources = [...new Set(S.feed.map((e) => e.source || "Unknown"))].sort();
     const slice = (Math.PI * 2) / Math.max(1, sources.length);
-    const maxAge = (S.status ? S.status.max_age_days : 30) * 864e5;
+    const maxAge = ((S.status && S.status.max_age_days) || 30) * 864e5;
     R.blips = S.feed.map((e, i) => {
       const si = sources.indexOf(e.source || "Unknown");
       const a = slice * si + slice * (0.12 + 0.76 * hash(e.link || String(i)));
@@ -702,11 +702,14 @@ td.nowrap { white-space: nowrap; }
       return { i, a, r: 0.06 + 0.9 * Math.sqrt(age), size: 2.2 + Math.min(e._n, 30) / 6,
                color: e._cve ? "#ffc23d" : e._n ? "#39ff88" : "#187a42" };
     });
+    R.blips = R.blips.filter((b) => isFinite(b.a) && isFinite(b.r) && isFinite(b.size));
     $("radarCount").textContent = S.feed.length + " contacts";
+    resize();
   }
 
   function resize() {
     const box = $("radarBox").getBoundingClientRect();
+    if (!box.width) return;
     const dpr = window.devicePixelRatio || 1;
     R.size = box.width;
     canvas.width = Math.round(box.width * dpr); canvas.height = Math.round(box.width * dpr);
@@ -714,10 +717,18 @@ td.nowrap { white-space: nowrap; }
   }
 
   function draw(ts) {
-    const dt = R.last ? Math.min(100, ts - R.last) : 16; R.last = ts;
+    requestAnimationFrame(draw);   // schedule first, so an error below can't stop the radar
+    const dt = R.last ? Math.min(100, Math.max(0, ts - R.last)) : 16; R.last = ts;
     if (!reduceMotion) R.angle = (R.angle + dt * (Math.PI * 2 / 5000)) % (Math.PI * 2);
+    if (!isFinite(R.angle)) R.angle = -Math.PI / 2;
+    const boxW = $("radarBox").clientWidth;
+    if (boxW && Math.abs(boxW - R.size) > 1) resize();   // re-measure if the layout changed under us
+    try { drawFrame(); } catch (err) { if (!draw._warned) { console.error("radar", err); draw._warned = true; } }
+  }
+
+  function drawFrame() {
     const W = R.size, c = W / 2, rad = W / 2 - 6;
-    if (rad < 20) { requestAnimationFrame(draw); return; }   // hidden or not laid out yet
+    if (rad < 20) return;   // hidden or not laid out yet
     ctx.clearRect(0, 0, W, W);
 
     // scope background
@@ -726,7 +737,7 @@ td.nowrap { white-space: nowrap; }
     ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(c, c, rad, 0, Math.PI * 2); ctx.fill();
 
     // rings (age bands) + labels
-    const days = S.status ? S.status.max_age_days : 30;
+    const days = (S.status && S.status.max_age_days) || 30;
     ctx.lineWidth = 1; ctx.font = Math.max(10, Math.round(W / 60)) + "px " + getComputedStyle(document.body).getPropertyValue("--mono");
     [1, 3, 7, 14, days].filter((d, k, arr) => d <= days && arr.indexOf(d) === k).forEach((d) => {
       const rr = rad * (0.06 + 0.9 * Math.sqrt(Math.min(1, d / days)));
@@ -768,7 +779,6 @@ td.nowrap { white-space: nowrap; }
 
     // center
     ctx.fillStyle = "#bb86fc"; ctx.shadowColor = "#bb86fc"; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(c, c, 3, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-    requestAnimationFrame(draw);
   }
 
   function blipAt(evt) {
@@ -843,6 +853,7 @@ td.nowrap { white-space: nowrap; }
   $("sweepBtn2").addEventListener("click", sweepNow);
   window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (document.getElementById("view-" + h)) setTab(h, false); });
   window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { R.last = 0; resize(); } });
   if (window.ResizeObserver) new ResizeObserver(resize).observe($("radarBox"));
   setInterval(() => { renderHeader(); }, 30000);   // keep "x min ago" fresh
 
