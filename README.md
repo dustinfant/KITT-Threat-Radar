@@ -63,6 +63,22 @@ The container is set to `restart: unless-stopped`, so it comes back whenever Doc
 
 `data/`, `sources.yaml` and `ioc_ignore.yaml` are mounted from the host, so the collected feed survives rebuilds and config changes don't need one.
 
+### 🪟 On Windows
+
+Install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) (keep the default WSL 2 backend) and [Git for Windows](https://git-scm.com/download/win), then run the same commands in PowerShell:
+
+```powershell
+git clone https://github.com/dustinfant/KITT-Threat-Radar.git
+cd KITT-Threat-Radar
+docker compose up -d --build
+```
+
+Open **http://localhost:5052**. Everything else (auto-start, hourly sweeps, editing `sources.yaml` and `ioc_ignore.yaml`) works the same as on macOS and Linux.
+
+- The repo's `.gitattributes` keeps Unix line endings on Windows, so files mounted into the container stay intact.
+- If Docker Desktop reports that virtualization is disabled, turn it on in your BIOS/UEFI settings.
+- Docker Desktop is free for personal use and small businesses. Larger organizations need a paid subscription, so check Docker's terms before using it at work.
+
 ## 🐍 Running without Docker
 
 Requires Python 3.10+.

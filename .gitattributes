@@ -1,0 +1,10 @@
+# Keep Unix line endings on every OS (Git for Windows would otherwise convert to CRLF,
+# which breaks shell scripts and can confuse files mounted into the Linux container)
+* text=auto eol=lf
+
+# Binary files: never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
