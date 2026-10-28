@@ -88,6 +88,10 @@
   url: https://www.ubuntu.com/usn/atom.xml
   category: Research
 
+- name: ICHI - Internet Cyber Health Index
+  url: https://ichi.global/api/alerts
+  category: Research
+
 # ---------------------------
 # General / Threat News
 # ---------------------------
