@@ -34,7 +34,7 @@
   category: Vendor
 
 - name: Microsoft Security Blog
-  url: https://cloudblogs.microsoft.com/microsoftsecure/feed/
+  url: https://www.microsoft.com/en-us/security/blog/feed/
   category: Vendor
 
 - name: Rapid7 Security
