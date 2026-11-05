@@ -118,8 +118,8 @@
 # ---------------------------
 # Government / Advisories
 # ---------------------------
-- name: CISA Alerts
-  url: https://www.cisa.gov/uscert/ncas/alerts.xml
+- name: Canadian Centre for Cyber Security
+  url: https://www.cyber.gc.ca/api/cccs/atom/v1/get?feed=alerts_advisories&lang=en
   category: Government
 
 - name: SANS Internet Storm Center

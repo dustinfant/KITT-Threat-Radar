@@ -110,7 +110,7 @@ Edit `sources.yaml`. Each entry needs a name, an RSS/Atom URL and a category:
 
 With Docker, run `docker compose restart` to pick up the change.
 
-Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 10 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (CISA, SANS ISC).
+Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 10 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (Canadian Centre for Cyber Security, SANS ISC).
 
 ## 🚫 Ignoring noisy indicators
 

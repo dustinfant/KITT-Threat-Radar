@@ -30,6 +30,20 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/121.0 Safari/537.36"
 }
+# RSS requests identify as a feed reader (what feedparser sent before); bot
+# protection on some feeds (Huntress, CISA) 403s a fake browser UA
+FEED_HEADERS = {
+    "User-Agent": feedparser.USER_AGENT,
+    "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+}
+BROWSER_FEED_HEADERS = {
+    **HEADERS,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate",
+    "Cache-Control": "no-cache",
+    "Upgrade-Insecure-Requests": "1",
+}
 
 # Articles older than this are hidden, dropped from storage, and never fetched.
 # Override with the MAX_AGE_DAYS environment variable (see docker-compose.yml).
@@ -179,18 +193,26 @@ def load_sources():
             return []
 
 def fetch_rss(feed_info, known_links=frozenset()):
-    feed = feedparser.parse(feed_info["url"])
+    # fetch with a timeout: feedparser.parse(url) has none, and one stalled feed
+    # would hold _fetch_lock forever and block every later sweep
+    resp = requests.get(feed_info["url"], headers=FEED_HEADERS, timeout=20)
+    if resp.status_code == 403:
+        # some sites (CISA) block feed-reader UAs; retry once looking like a full browser
+        resp = requests.get(feed_info["url"], headers=BROWSER_FEED_HEADERS, timeout=20)
+    resp.raise_for_status()
+    feed = feedparser.parse(resp.content)
     normalized = []
 
     for entry in feed.entries:
         if entry.get("link", "") in known_links:
             continue  # already stored; don't re-download the article every hour
-        if is_too_old(entry.get("published", "")):
+        published = entry.get("published") or entry.get("updated", "")  # Atom feeds may only have <updated>
+        if is_too_old(published):
             continue  # some feeds return years of archives
         normalized.append({
             "title": entry.get("title", ""),
             "link": entry.get("link", ""),
-            "published": entry.get("published", ""),
+            "published": published,
             "source": feed_info.get("name", "Unknown"),
             "category": feed_info.get("category", "Uncategorized"),
             "fetched_at": now_iso(),
