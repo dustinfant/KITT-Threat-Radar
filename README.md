@@ -4,20 +4,20 @@
 
 KITT is a self-hosted threat intelligence console. It sweeps 28 security RSS feeds (vendor research, news and government advisories) every hour, extracts the IOCs from each article, and puts it all on a live radar with tools to search, investigate and export what it finds.
 
-Built for SOC analysts, threat hunters and blue teamers who want one place to watch the threat landscape without paying for a platform.
+Useful if you want one place to keep up with new threat intel without paying for a platform.
 
 ![KITT Threat Radar console](docs/screenshots/overview.png)
 
-## 🧠 What it does
+## What it does
 
-- **Live threat radar.** Every article from the last 30 days is a blip. Newest sits at the center, each source has its own slice, bigger blips carry more indicators, and amber marks articles that mention CVEs. Hover to preview, click to inspect.
-- **System status at a glance.** Feeds online, articles collected, new in the last 24 hours, unique IOCs, and a breakdown by indicator type. The header shows when the last sweep ran and when the next one is due.
-- **IOC extraction.** Pulls IPs, domains, emails, MD5/SHA1/SHA256 hashes, CVEs and Windows file paths from the article body, and drops the noise: the publisher's own site, filenames that look like domains, private IPs and anything on your ignore list.
-- **Hands-off updates.** Sweeps every hour (or on demand), saves as each source finishes, and the dashboard refreshes itself when new intel lands.
-- **Fresh by default.** Newest first; anything older than 30 days is pruned (set `MAX_AGE_DAYS` in `docker-compose.yml` to change it).
-- **Runs in Docker.** One command to start, comes back on its own after a reboot, and scales from a laptop screen to an ultrawide monitor.
+- The radar shows every article from the last 30 days as a blip. Newer articles sit closer to the center, each source gets its own slice, bigger blips have more indicators, and amber ones mention CVEs. Hover to preview, click to open.
+- The stats panel shows feeds online, total articles, new in the last 24 hours, unique IOCs and a breakdown by type. The header shows when the last sweep ran and when the next one is due.
+- IOCs are pulled from the article body: IPs, domains, emails, MD5/SHA1/SHA256 hashes, CVEs and Windows file paths. It skips the publisher's own site, filenames that look like domains, private IPs and anything on your ignore list.
+- Feeds are swept every hour, or on demand. Results save as each source finishes and the page refreshes when new articles come in.
+- Articles older than 30 days are pruned. Set `MAX_AGE_DAYS` in `docker-compose.yml` to change that.
+- It runs in Docker, restarts on its own after a reboot, and works on anything from a laptop to an ultrawide.
 
-## 🛰 Four workspaces
+## Four workspaces
 
 ### Monitor
 The live feed. Search titles, summaries and indicators; filter by category, source or articles with IOCs. Each card expands to show its indicators, and clicking one jumps to Investigate.
@@ -39,7 +39,7 @@ Export to CSV or STIX 2.1, run a sweep on demand, check per-feed health (with er
 
 ![Stay Ahead](docs/screenshots/stay-ahead.png)
 
-## 🚀 Quick start (Docker, recommended)
+## Quick start (Docker, recommended)
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) or another Docker engine with Compose.
 
@@ -63,7 +63,7 @@ The container is set to `restart: unless-stopped`, so it comes back whenever Doc
 
 `data/`, `sources.yaml` and `ioc_ignore.yaml` are mounted from the host, so the collected feed survives rebuilds and config changes don't need one.
 
-### 🪟 On Windows
+### On Windows
 
 Install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) (keep the default WSL 2 backend) and [Git for Windows](https://git-scm.com/download/win), then run the same commands in PowerShell:
 
@@ -79,7 +79,7 @@ Open **http://localhost:5052**. Everything else (auto-start, hourly sweeps, edit
 - If Docker Desktop reports that virtualization is disabled, turn it on in your BIOS/UEFI settings.
 - Docker Desktop is free for personal use and small businesses. Larger organizations need a paid subscription, so check Docker's terms before using it at work.
 
-## 🐍 Running without Docker
+## Running without Docker
 
 Requires Python 3.10+.
 
@@ -98,7 +98,7 @@ To populate the feed without starting the server:
 python fetcher/fetch_normalized.py
 ```
 
-## 🗂 Adding sources
+## Adding sources
 
 Edit `sources.yaml`. Each entry needs a name, an RSS/Atom URL and a category:
 
@@ -112,7 +112,7 @@ With Docker, run `docker compose restart` to pick up the change.
 
 Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntress, Check Point Research, Microsoft and more), 10 research and community blogs (Squiblydoo, Securelist, Malwarebytes Labs, AdSecurity and more), 7 news outlets (BleepingComputer, The Hacker News, SecurityWeek, Schneier on Security and more) and 2 government sources (Canadian Centre for Cyber Security, SANS ISC).
 
-## 🚫 Ignoring noisy indicators
+## Ignoring noisy indicators
 
 `ioc_ignore.yaml` hides indicators everywhere, exports included:
 
@@ -121,7 +121,7 @@ Currently configured: 9 vendor feeds (Mandiant, CrowdStrike, SentinelOne, Huntre
 
 Private, loopback and reserved IPs are always ignored. Edits apply within a minute without a restart, and un-ignoring brings an indicator back, since stored data is never stripped.
 
-## 📊 API
+## API
 
 | Path | Returns |
 |---|---|
@@ -136,7 +136,7 @@ Private, loopback and reserved IPs are always ignored. Edits apply within a minu
 | `/export/csv` | Articles with IOCs, one row per article |
 | `/export/stix` | A STIX 2.1 bundle of indicators |
 
-## 📦 Project structure
+## Project structure
 
 ```
 KITT-Threat-Radar/
@@ -154,7 +154,7 @@ KITT-Threat-Radar/
 └── restart_flask.sh       # Non-Docker restart helper
 ```
 
-## 📝 Notes
+## Notes
 
 - IOC extraction is regex-based. It reads only the article body, drops the publisher's own domains, filenames that look like domains (`httpd.conf`, `update.zip`) and invalid IPs, but expect some noise, such as reference sites the article cites.
 - Flask's built-in server is fine for local use. The dashboard can start sweeps and edit the ignore list, so add authentication and a production WSGI server before exposing it beyond your machine.
