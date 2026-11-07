@@ -53,6 +53,16 @@ body::after {
   margin: 0; font-family: var(--mono); font-size: 1.35rem; letter-spacing: 0.22em; color: var(--green);
   text-shadow: 0 0 12px rgba(57,255,136,0.45);
 }
+/* KITT scanner bar under the title */
+.scanner {
+  display: flex; gap: 3px; height: 9px; margin: 8px 0 0; padding: 2px;
+  background: #020403; border: 1px solid var(--line); border-radius: 3px;
+}
+.scanner span {
+  flex: 1; border-radius: 1px; opacity: 0.08;
+  background: linear-gradient(180deg, #8dffb4, var(--green) 50%, var(--green-mid));
+  box-shadow: 0 0 6px var(--green), 0 0 12px rgba(57,255,136,0.5);
+}
 .brand .sub { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.2em; color: var(--purple); text-shadow: 0 0 10px rgba(187,134,252,0.35); margin-top: 3px; }
 .sys { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; }
 .pill {
@@ -242,6 +252,7 @@ td.nowrap { white-space: nowrap; }
       <div>
         <h1>KITT THREAT RADAR</h1>
         <div class="sub">KNOWLEDGE &amp; INTELLIGENCE THREAT TRACKER</div>
+        <div class="scanner" id="scanner" aria-hidden="true"></div>
       </div>
     </div>
     <div class="sys">
@@ -856,6 +867,24 @@ td.nowrap { white-space: nowrap; }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { R.last = 0; resize(); } });
   if (window.ResizeObserver) new ResizeObserver(resize).observe($("radarBox"));
   setInterval(() => { renderHeader(); }, 30000);   // keep "x min ago" fresh
+
+  // ---------------------------------------------------------------- KITT scanner
+  // Light sweeps back and forth; each segment fades out behind it like the car's.
+  (function scanner() {
+    const box = $("scanner"), N = 14, PERIOD = 2000, DECAY = 110, STEPS = 60;
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    for (let i = 0; i < N; i++) {
+      const seg = box.appendChild(document.createElement("span"));
+      if (reduce || !seg.animate) { seg.style.opacity = i === N >> 1 ? 1 : 0.25; continue; }
+      const hit = i / (N - 1) * PERIOD / 2, hits = [hit, PERIOD - hit], frames = [];
+      for (let s = 0; s <= STEPS; s++) {
+        const t = s / STEPS * PERIOD;
+        const b = Math.max(...hits.map(h => Math.exp(-(((t - h) % PERIOD + PERIOD) % PERIOD) / DECAY)));
+        frames.push({ opacity: 0.08 + 0.92 * b });
+      }
+      seg.animate(frames, { duration: PERIOD, iterations: Infinity });
+    }
+  })();
 
   // ---------------------------------------------------------------- boot
   const startTab = location.hash.slice(1) || store.get("tab") || "monitor";
