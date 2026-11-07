@@ -32,12 +32,12 @@ Every unique indicator in one table, filterable by type and searchable, sorted b
 ### Investigate
 Pick an indicator to see every article it appeared in, which sources reported it, when it was first and last seen, and which other indicators were reported alongside it. With nothing selected, it suggests the most-reported indicators.
 
-![Investigate: an indicator drilled down](docs/screenshots/investigate-detail.png)
-
-![Investigate: starting point with the most-reported indicators](docs/screenshots/investigate.png)
+![Investigate: an indicator drilled down](docs/screenshots/investigate.png)
 
 ### Stay Ahead
 Export to CSV or STIX 2.1, run a sweep on demand, check per-feed health (with error messages for failing sources), review sweep history and manage the ignore list.
+
+![Stay Ahead](docs/screenshots/stay-ahead.png)
 
 ## 🚀 Quick start (Docker, recommended)
 
