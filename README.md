@@ -2,6 +2,8 @@
 
 **Knowledge & Intelligence Threat Tracker**
 
+<img src="docs/kitt-scanner.svg" alt="KITT scanner light bar" width="640">
+
 KITT is a self-hosted threat intelligence console. It sweeps 28 security RSS feeds (vendor research, news and government advisories) every hour, extracts the IOCs from each article, and puts it all on a live radar with tools to search, investigate and export what it finds.
 
 Useful if you want one place to keep up with new threat intel without paying for a platform.
