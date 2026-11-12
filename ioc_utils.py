@@ -40,6 +40,11 @@ FILE_EXTENSION_TLDS = {"zip", "mov", "py", "sh", "pl", "md", "rs", "ps", "so", "
 # Page chrome that carries site navigation, not article content
 _NOISE_TAGS = ["script", "style", "noscript", "nav", "header", "footer", "aside", "form", "svg", "iframe"]
 
+# An <article>/<main> is trusted as the post only if it holds at least this much text
+# and this share of the page's text; otherwise the whole body is used
+MIN_ARTICLE_CHARS = 500
+MIN_ARTICLE_SHARE = 0.3
+
 
 def refang(value):
     return (value.replace("[.]", ".").replace("(dot)", ".")
@@ -66,8 +71,19 @@ def article_text(html):
         c.extract()
     for tag in soup.find_all(_NOISE_TAGS):
         tag.decompose()
-    body = soup.find("article") or soup.find("main") or soup.body or soup
-    return body.get_text(separator=" ", strip=True)
+    # Pages often carry several <article>/<main> elements (sidebar promos, related
+    # stories), so the first one isn't necessarily the post: take the largest.
+    # If even that is a small slice of the page, the post isn't in one of them; use the body.
+    root = soup.body or soup
+    page = root.get_text(separator=" ", strip=True)
+    best = ""
+    for el in soup.find_all(["article", "main"]):
+        text = el.get_text(separator=" ", strip=True)
+        if len(text) > len(best):
+            best = text
+    if len(best) >= max(MIN_ARTICLE_CHARS, len(page) * MIN_ARTICLE_SHARE):
+        return best
+    return page
 
 
 # ---------------------------------------------------------------- ignore list
